@@ -55,3 +55,9 @@ docs/_build/
 
 # PyBuilder
 target/
+
+# .idea/
+.idea/
+
+# data folders(the disease data)
+data/
