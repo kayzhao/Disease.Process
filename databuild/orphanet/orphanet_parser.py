@@ -5,7 +5,8 @@ import pandas as pd
 from pymongo import MongoClient
 
 from utils.common import list2dict
-from . import ages_path, gene_path, hpo_path, ordo_path, prev_path, xref_path
+from databuild.orphanet import \
+    ages_path, gene_path, hpo_path, ordo_path, prev_path, xref_path
 
 
 def parse_ordo():
@@ -288,9 +289,11 @@ def parse(mongo_collection=None, drop=True):
         db = mongo_collection
     else:
         client = MongoClient()
-        db = client.mydisease.orphanet
+        db = client.disease.orphanet
     if drop:
         db.drop()
+
+    print("------------orphanet data parsing--------------")
     d = parse_ordo()
     parse_xref(d)
     db.insert_many(list(d.values()))
@@ -307,3 +310,8 @@ def parse(mongo_collection=None, drop=True):
 
     for dd in dlist:
         db.update_one({'_id': dd['_id']}, {'$set': dd}, upsert=True)
+
+    print("------------orphanet data parsed success--------------")
+
+    # if __name__ == '__main__':
+    # parse()

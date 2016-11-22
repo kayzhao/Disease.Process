@@ -6,7 +6,7 @@ from pymongo import MongoClient
 
 from utils.obo import read_obo
 from utils.common import list2dict
-from . import *
+from databuild.do import *
 
 
 def graph_to_d(graph):
@@ -100,13 +100,15 @@ def parse(mongo_collection=None, drop=True):
         db = mongo_collection
     else:
         client = MongoClient()
-        db = client.mydisease.hpo
+        db = client.disease.do
     if drop:
         db.drop()
 
+    print("------------do data parsing--------------")
     graph = read_obo(open(file_path).readlines())
+    print("read do obo file success")
     d = graph_to_d(graph)
-
+    print("build the graph to dict")
     for value in d.values():
         if 'xref' in value:
             value['xref'] = parse_xref(value['xref'])
@@ -121,8 +123,9 @@ def parse(mongo_collection=None, drop=True):
                     value['xref'] = parse_xref(ref)
 
     db.insert_many(d.values())
-    print(d['doid:1171'])
+    print("insert into mongodb success")
+    print("------------do data parsed success--------------")
 
 
-if __name__ == '__main__':
-    parse()
+# if __name__ == '__main__':
+# parse()

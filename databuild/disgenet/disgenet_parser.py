@@ -3,7 +3,7 @@ from itertools import chain
 
 import pandas as pd
 from pymongo import MongoClient
-from . import *
+from databuild.disgenet import *
 
 
 def process_gene(file_path_gene_disease):
@@ -68,26 +68,26 @@ def parse(mongo_collection=None, drop=True):
     if drop:
         db.drop()
 
-    print("disgenet data parsing")
+    print("------------disgenet data parsing--------------")
     d_gene = process_gene(file_path_gene_disease)
     print("load gene dict success")
     d_snp = process_snp(file_path_snp_disease)
     print("load snp dict success")
 
-    print(len(d_gene))
-    print(len(d_snp))
+    # print(len(d_gene))
+    # print(len(d_snp))
 
     d = defaultdict(dict)
     for key in set(chain(*[list(d_gene.keys()), list(d_snp.keys())])):
         # merge two dict
         d[key] = dict(d_gene.get(key, {}), **d_snp.get(key, {}))
 
-    print(len(d))
+    # print(len(d))
     print("build dict within gene and snp together")
 
     db.insert_many(d.values())
     print("insert into mongodb success")
+    print("------------disgenet data parsed success--------------")
 
-
-if __name__ == '__main__':
-    parse()
+    # if __name__ == '__main__':
+    # parse()

@@ -20,9 +20,9 @@ desc_url = "ftp://nlmpubs.nlm.nih.gov/online/mesh/MESH_FILES/asciimesh/d2017.bin
 supp_url = "ftp://nlmpubs.nlm.nih.gov/online/mesh/MESH_FILES/asciimesh/c2017.bin"
 sem_groups = "https://semanticnetwork.nlm.nih.gov/download/SemGroups.txt"
 
-desc_path = os.path.join(DATA_DIR_MESH, "d2017.bin")
-supp_path = os.path.join(DATA_DIR_MESH, "c2017.bin")
-sem_groups_path = os.path.join(DATA_DIR_MESH, "SemGroups.txt")
+desc_path = os.path.join(DATA_DIR_MESH, os.path.split(desc_url)[1])
+supp_path = os.path.join(DATA_DIR_MESH, os.path.split(supp_url)[1])
+sem_groups_path = os.path.join(DATA_DIR_MESH, os.path.split(sem_groups)[1])
 
 
 def get_mapping():

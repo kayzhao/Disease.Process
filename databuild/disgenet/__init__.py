@@ -15,11 +15,11 @@ DATA_DIR_DISGENET = os.path.join(DATA_DIR, "disgenet")
 
 # The file contains gene-disease associations from UNIPROT, CTD (human subset), ClinVar, Orphanet, and the GWAS Catalog.
 url_gene_disease = "http://www.disgenet.org/ds/DisGeNET/results/curated_gene_disease_associations.tsv.gz"
-file_path_gene_disease = os.path.join(DATA_DIR_DISGENET, "curated_gene_disease_associations.tsv.gz")
+file_path_gene_disease = os.path.join(DATA_DIR_DISGENET, os.path.split(url_gene_disease)[1])
 
 # The file contains All SNP-gene-disease associations in DisGeNET.
 url_snp_disease = "http://www.disgenet.org/ds/DisGeNET/results/all_snps_sentences_pubmeds.tsv.gz"
-file_path_snp_disease = os.path.join(DATA_DIR_DISGENET, "all_snps_sentences_pubmeds.tsv.gz")
+file_path_snp_disease = os.path.join(DATA_DIR_DISGENET, os.path.split(url_snp_disease)[1])
 
 
 def get_mapping():

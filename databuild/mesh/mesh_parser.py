@@ -4,7 +4,7 @@ from itertools import groupby, filterfalse
 
 import pandas as pd
 from pymongo import MongoClient
-from . import *
+from databuild.mesh import *
 
 
 def load_semantic_types():
@@ -77,7 +77,7 @@ def load_mesh_desc():
     # which attributes can have multiple values?
     # for k, l in groupby(mesh_desc, lambda x: x == "*NEWRECORD"):
     # print(k)
-    #     print(tuple(l))
+    # print(tuple(l))
     #
     # for k, l in filterfalse(lambda x: x[0], groupby(mesh_desc, lambda x: x == "*NEWRECORD")):
     #     print(k)
@@ -209,22 +209,25 @@ def load_mesh_supp():
     return mesh_supp_terms
 
 
-def parse(drop=True):
-    client = MongoClient()
-    db = client.mydisease.mesh
+def parse(mongo_collection=None, drop=True):
+    if mongo_collection:
+        db = mongo_collection
+    else:
+        client = MongoClient()
+        db = client.disease.mesh
     if drop:
         db.drop()
+
+    print("------------mesh data parsing--------------")
     mesh_terms = load_mesh_desc()
-    print("load desc success")
+    print("load mesh desc success")
     mesh_supp_terms = load_mesh_supp()
-    print("load  supp success")
+    print("load  mesh supp success")
     db.insert_many(mesh_terms)
-    print("insert desc success")
+    print("insert mesh desc success")
     db.insert_many(mesh_supp_terms)
-    print("insert supp success")
+    print("insert mesh supp success")
+    print("------------mesh data parsed success--------------")
 
-
-if __name__ == '__main__':
-    # print(sys.getdefaultencoding())
-    # print(repr(sem_groups_path))
-    parse()
+    # if __name__ == '__main__':
+    # parse()

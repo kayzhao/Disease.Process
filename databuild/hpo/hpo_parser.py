@@ -5,7 +5,7 @@ from pymongo import MongoClient
 
 from utils.obo import read_obo
 from utils.common import list2dict
-from . import *
+from databuild.hpo import *
 
 # # This is copied from diseaseontology.parser with modifications.
 def graph_to_d(graph):
@@ -85,14 +85,15 @@ def parse(mongo_collection=None, drop=True):
         db = mongo_collection
     else:
         client = MongoClient()
-        db = client.mydisease.hpo
+        db = client.disease.hpo
     if drop:
         db.drop()
 
-    print(file_path)
+    print("------------hpo data parsing--------------")
     graph = read_obo(open(file_path).readlines())
+    print("read hpo obo file success")
     d = graph_to_d(graph)
-
+    print("build the graph to dict")
     for value in d.values():
         if 'xref' in value:
             value['xref'] = parse_xref(value['xref'])
@@ -109,7 +110,8 @@ def parse(mongo_collection=None, drop=True):
                 value['xref'] = {k: v for k, v in value['xref'].items() if k not in {"hpo", "ddd"}}
 
     db.insert_many(d.values())
-    print(d['hp:0000005'])
+    print("insert into mongodb success")
+    print("------------hpo data parsed success--------------")
 
 
 if __name__ == '__main__':

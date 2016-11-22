@@ -5,6 +5,18 @@ import os
 # Data Path of Project
 DATA_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), "data")
 
+# disease database names
+db_names = ['ctd',
+            'do',
+            'disgenet',
+            'hpo',
+            'mesh',
+            'ndfrt',
+            'omim',
+            'orphanet',
+            'pharmacotherapydb'
+]
+
 LOGGER_NAME = "disease.data"
 # this will affect any logging calls
 logger = logging.getLogger(LOGGER_NAME)
