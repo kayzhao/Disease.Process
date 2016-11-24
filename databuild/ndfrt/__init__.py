@@ -1,6 +1,4 @@
-import os
-
-from mydisease import DATA_DIR
+__author__ = "kayzhao"
 
 __METADATA__ = {
     "src_name": 'NDF-RT2',
@@ -11,10 +9,16 @@ __METADATA__ = {
     "license_url": ""
 }
 
+from config import *
+
+# data directory data/mesh
+DATA_DIR_NDFRT = os.path.join(DATA_DIR, "ndfrt")
+
+
 # downloaded from: https://www.cancer.gov/research/resources/terminology/fmt
 # http://evs.nci.nih.gov/ftp1/NDF-RT/NDF-RT%20Documentation.pdf
 url = "http://evs.nci.nih.gov/ftp1/NDF-RT/NDF-RT_XML.zip"
-path = os.path.join(DATA_DIR, "NDFRT_Public_2016.09.06_TDE.xml")
+path = os.path.join(DATA_DIR_NDFRT, "NDFRT_Public_2016.11.07_TDE.xml")
 
 
 def get_mapping():

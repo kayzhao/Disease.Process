@@ -35,14 +35,17 @@ def parse_all():
     from databuild.mesh import mesh_parser
     from databuild.ctdbase import ctd_parser
     from databuild.orphanet import orphanet_parser
+    from databuild.ndfrt import ndfrt_parser
+    # from databuild.omim import omim_parser
 
-    client = MongoClient()
-    # do_parser.parse(client.disease.do)
-    # disgenet_parser.parse(client.disease.disgenet)
-    # hpo_parser.parse(client.disease.hpo)
-    # mesh_parser.parse(client.disease.mesh)
+    client = MongoClient('mongodb://zkj1234:zkj1234@192.168.1.113:27017/disease')
+    # do_parser.parse(client.disease.do, False)
+    # disgenet_parser.parse(client.disease.disgenet, False)
+    # hpo_parser.parse(client.disease.hpo, False)
+    # mesh_parser.parse(client.disease.mesh, False)
     ctd_parser.parse(client.disease.ctd)
-    # # omim_parser.parse()
+    # ndfrt_parser.parse(client.disease.ndfrt)
+    # omim_parser.parse()
     # orphanet_parser.parse()
 
 
@@ -59,7 +62,7 @@ def merge_one(db_name):
 
 
 def merge(mongo_collection=None, drop=True):
-    ## merge docs
+    # # merge docs
     if mongo_collection:
         disease = mongo_collection
     else:

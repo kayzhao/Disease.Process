@@ -61,3 +61,6 @@ target/
 
 # data folders(the disease data)
 data/
+
+# ini files
+*.ini

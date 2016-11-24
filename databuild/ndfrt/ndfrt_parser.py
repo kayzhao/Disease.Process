@@ -1,6 +1,3 @@
-from collections import defaultdict
-from itertools import chain
-
 from pymongo import MongoClient
 
 from databuild.ndfrt import path
@@ -110,5 +107,6 @@ def parse(mongo_collection=None, drop=True):
     db.insert_many(diseases.values())
     print("------------ndfrt data parsed success--------------")
 
-# if __name__ == '__main__':
-# parse()
+
+if __name__ == '__main__':
+    parse()

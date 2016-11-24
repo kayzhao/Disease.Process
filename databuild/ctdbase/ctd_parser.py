@@ -39,6 +39,7 @@ def parse_csv_to_df(f):
         line = next(f)
     # parse the column headers from the comments
     fields = next(f)[1:].strip().split(",")
+
     df = pd.read_csv(f, delimiter=",", comment="#")
     df.columns = fields
 
@@ -72,13 +73,42 @@ def parse_df(db, df, relationship: str):
     """
     columns_keep = get_columns_to_keep(relationship)
     total = len(set(df.DiseaseID))
+
     for diseaseID, subdf in tqdm(df.groupby("DiseaseID"), total=total):
         sub = subdf[columns_keep].rename(columns=columns_rename).to_dict(orient="records")
         sub = [{k: v for k, v in s.items() if v == v} for s in sub]  # get rid of nulls
         db.update_one({'_id': diseaseID}, {'$set': {relationship.lower(): sub}}, upsert=True)
 
 
-def process_genes(db, f):
+def process_chemicals(db, f, relationship: str):
+    # get the columns name
+    line = next(f)
+    while not line.startswith("# Fields:"):
+        line = next(f)
+    # parse the column headers from the comments
+    fields = next(f)[1:].strip().split(",")
+
+    columns_keep = get_columns_to_keep(relationship)
+    chunksize = 100000
+    for df in tqdm(pd.read_csv(f, delimiter=",", comment="#", header=None, chunksize=chunksize,
+                               low_memory=False, names=fields), total=49867785 / chunksize):
+
+        # split pipe-delimited fields
+        fields_split = {'DirectEvidence', 'OmimIDs', 'PubMedIDs', 'InferenceGeneSymbols'} & set(fields)
+        for field in fields_split:
+            # don't split NaN
+            field_split = df[field].dropna().astype(str).str.split("|")
+            df[field][field_split.index] = field_split
+        df['DiseaseID'] = df['DiseaseID'].map(parse_diseaseid)
+
+        # update the data
+        for diseaseID, subdf in df.groupby("DiseaseID"):
+            sub = subdf[columns_keep].rename(columns=columns_rename).to_dict(orient="records")
+            sub = [{k: v for k, v in s.items() if v == v} for s in sub]  # get rid of nulls
+            db.update_one({'_id': diseaseID}, {'$set': {relationship.lower(): sub}}, upsert=True)
+
+
+def process_genes(db, f, relationship:str):
     """
     # for the genes file, which is enormous, we need to do something different
     # basically same as others, but in chunks
@@ -88,7 +118,7 @@ def process_genes(db, f):
     WriteError: Resulting document after update is larger than 16777216
 
     """
-    raise NotImplementedError()
+    # raise NotImplementedError()
     chunksize = 100000
     names = ['GeneSymbol', 'GeneID', 'DiseaseName', 'DiseaseID', 'DirectEvidence',
              'InferenceChemicalName', 'InferenceScore', 'OmimIDs', 'PubMedIDs']
@@ -112,24 +142,28 @@ def parse(mongo_collection=None, drop=True):
         db = mongo_collection
     else:
         client = MongoClient()
-        db = client.disease.ctdbase
+        db = client.disease.ctd
     if drop:
         db.drop()
 
     print("------------ctdbase data parsing--------------")
     for relationship, file_path in relationships.items():
-        print(relationship)
-        print(file_path)
+        print(relationship + "\t" + file_path)
         with gzip.open(os.path.join(DATA_DIR_CTD, file_path), 'rt', encoding='utf-8') as f:
             if relationship == "genes":
-                # process_genes(db, f)
-                print("skipping genes")
+                # print("parsing the  " + relationship + "data")
+                # process_genes(db, f, relationship)
                 pass
+            elif relationship == "chemicals":
+                print("parsing the  " + relationship + "data")
+                process_chemicals(db, f, relationship)
             else:
+                print("parsing the  " + relationship + "data")
                 df = parse_csv_to_df(f)
                 parse_df(db, df, relationship)
 
     print("------------ctdbase data parsed success--------------")
 
-    # if __name__ == '__main__':
-    # parse()
+
+if __name__ == '__main__':
+    parse()
