@@ -1,5 +1,9 @@
 from collections import defaultdict
 from itertools import chain
+import pickle
+import time
+
+str_types = str
 
 
 def list2dict(xlist, sep=":"):
@@ -64,4 +68,55 @@ def ask(prompt, options='YN'):
         if s in options:
             break
     return s
+
+
+def dump2gridfs(object, filename, db, bin=1):
+    '''
+    Save a compressed object to MongoDB gridfs.
+    '''
+
+    import gzip
+    import gridfs
+
+    print('Dumping into "MongoDB:%s/%s"...' % (db.name, filename), end='')
+    fs = gridfs.GridFS(db)
+    if fs.exists(_id=filename):
+        fs.delete(filename)
+    fobj = fs.new_file(filename=filename, _id=filename)
+    try:
+        gzfobj = gzip.GzipFile(filename=filename, mode='wb', fileobj=fobj)
+        pickle.dump(object, gzfobj, protocol=bin)
+    finally:
+        gzfobj.close()
+        fobj.close()
+    print('Done. [%s]' % fs.get(filename).length)
+
+
+def loadobj(filename, db, mode='file'):
+    '''Loads a compressed object from disk file (or file-like handler) or
+        MongoDB gridfs file (mode='gridfs')
+           obj = loadobj('data.pyobj')
+
+           obj = loadobj(('data.pyobj', mongo_db), mode='gridfs')
+    '''
+    import gzip
+
+    if mode == 'gridfs':
+        import gridfs
+
+        filename, db = filename, db  # input is a tuple of (filename, mongo_db)
+        fs = gridfs.GridFS(db)
+        fobj = fs.get(filename)
+    else:
+        if isinstance(filename, str_types):
+            fobj = open(filename, 'rb')
+        else:
+            fobj = filename  # input is a file-like handler
+    gzfobj = gzip.GzipFile(fileobj=fobj)
+    try:
+        obj = pickle.load(gzfobj)
+    finally:
+        gzfobj.close()
+        fobj.close()
+    return obj
 
