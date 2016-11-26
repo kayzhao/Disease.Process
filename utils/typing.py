@@ -1,13 +1,12 @@
 __author__ = 'kayzhao'
 
 from pymongo import MongoClient
-
+from utils.mongo import get_src_conn
 
 def getDBTypes():
     from databuild.utils import get_types, compare_types
 
     print("typing")
-    compare_types = MongoClient()
     client = MongoClient('mongodb://zkj1234:zkj1234@192.168.1.113:27017/disease')
     db = client.disease.do
     doc = db.find_one()
@@ -17,6 +16,7 @@ def getDBTypes():
         docs.append(doc)
         if n > 100:
             break
+
     compare_types(docs)
 
 

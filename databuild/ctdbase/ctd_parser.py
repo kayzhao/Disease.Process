@@ -141,15 +141,15 @@ def process_genes(db, f, relationship:str):
 
 
 def parse(mongo_collection=None, drop=True):
-    # if mongo_collection:
-    # db = mongo_collection
-    # else:
-    # client = MongoClient()
-    #     db = client.disease.ctd
-    # if drop:
-    #     db.drop()
+    if mongo_collection:
+        db = mongo_collection
+    else:
+        client = MongoClient()
+        db = client.disease.ctd
+    if drop:
+        db.drop()
 
-    client = MongoClient('mongodb://zkj1234:zkj1234@192.168.1.113:27017/disease')
+    # client = MongoClient('mongodb://zkj1234:zkj1234@192.168.1.113:27017/disease')
     print("------------ctdbase data parsing--------------")
     for relationship, file_path in relationships.items():
         print(relationship + "\t" + file_path)
@@ -158,22 +158,16 @@ def parse(mongo_collection=None, drop=True):
                 print("parsing the  " + relationship + "data")
                 # use gridfs , the param db must be database not database.collection
                 process_genes(client.disease, f, relationship)
-                # elif relationship == "chemicals":
-                # print("parsing the  " + relationship + "data")
-                #     process_chemicals(db, f, relationship)
-                # else:
-                #     print("parsing the  " + relationship + "data")
-                #     df = parse_csv_to_df(f)
-                #     parse_df(db, df, relationship)
+            elif relationship == "chemicals":
+                print("parsing the  " + relationship + "data")
+                process_chemicals(db, f, relationship)
+            else:
+                print("parsing the  " + relationship + "data")
+                df = parse_csv_to_df(f)
+                parse_df(db, df, relationship)
 
     print("------------ctdbase data parsed success--------------")
 
 
 if __name__ == '__main__':
     parse()
-    # client = MongoClient()
-    # db = client.disease
-    # for x in loadobj('ctd_genes_mesh:D052439.obj',db, 'gridfs'):
-    # for key,value in x.items():
-    # print(key)
-    #         print(value)

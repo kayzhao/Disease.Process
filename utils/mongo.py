@@ -1,7 +1,8 @@
 from __future__ import print_function
 import time
 
-from mongokit import Connection
+# from mongokat import Connection
+from pymongo import MongoClient
 
 from config import (DATA_SRC_SERVER, DATA_SRC_PORT, DATA_SRC_DATABASE,
                     DATA_SRC_MASTER_COLLECTION, DATA_SRC_DUMP_COLLECTION,
@@ -13,11 +14,11 @@ from utils.common import timesofar
 
 
 def get_conn(server, port):
-    uri = "mongodb://{}:{}@{}:{}".format(DATA_SERVER_USERNAME,
-                                         DATA_SERVER_PASSWORD,
-                                         server, port)
-    conn = Connection(uri)
-    return conn
+    uri = "mongodb://{}:{}@{}:{}/disease".format(DATA_SERVER_USERNAME,
+                                                 DATA_SERVER_PASSWORD,
+                                                 server, port)
+    client = MongoClient(uri)
+    return client
 
 
 def get_src_conn():
