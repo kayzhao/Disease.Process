@@ -8,11 +8,23 @@ from collections import defaultdict
 from utils.common import dict2list
 
 
-def getDBInfo():
+def get_ids_info():
+    print("get the db disease ids statistics ")
     all_ids = set()
     for db_name in db_names:
         db = get_src_conn().disease[db_name]
         all_ids.update(set([x['_id'] for x in db.find({}, {'_id': 1})]))
+
+    for k, v in Counter([x.split(":", 1)[0] for x in all_ids]).items():
+        print(k, v)
+
+
+def get_db_info():
+    print("get the db disease statistics ")
+    all_ids = set()
+    for db_name in db_names:
+        db = get_src_conn().disease[db_name]
+        all_ids.update(set([db_name + ":" + x['_id'] for x in db.find({}, {'_id': 1})]))
 
     for k, v in Counter([x.split(":", 1)[0] for x in all_ids]).items():
         print(k, v)
@@ -42,9 +54,7 @@ def build_id_graph():
 
 def num_doids_in_sg(g, cutoff):
     d = defaultdict(list)
-
     all_ids = set()
-
     for db_name in db_names:
         db = get_src_conn().disease[db_name]
         all_ids.update(set([x['_id'] for x in db.find({}, {'_id': 1})]))
@@ -79,5 +89,6 @@ def id_mapping_test():
 
 
 if __name__ == "__main__":
-    getDBInfo()
+    get_db_info()
+    get_ids_info()
     id_mapping_test()
