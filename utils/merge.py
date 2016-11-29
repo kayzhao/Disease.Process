@@ -16,7 +16,7 @@ def get_ids_info():
         all_ids.update(set([x['_id'] for x in db.find({}, {'_id': 1})]))
 
     for k, v in Counter([x.split(":", 1)[0] for x in all_ids]).items():
-        print(k, v)
+        print("%s \t %d" % (k, v))
 
 
 def get_db_info():
@@ -27,7 +27,7 @@ def get_db_info():
         all_ids.update(set([db_name + ":" + x['_id'] for x in db.find({}, {'_id': 1})]))
 
     for k, v in Counter([x.split(":", 1)[0] for x in all_ids]).items():
-        print(k, v)
+        print("%s \t %d" % (k, v))
 
 
 def get_equiv_doid(g, did):
@@ -46,7 +46,11 @@ def build_id_graph():
     g = nx.Graph()
     for db_name in db_names:
         db = get_src_conn().disease[db_name]
-        for doc in db.find({'xref': {'$exists': True}}, {'xref': 1}):
+        docs = db.find({'xref': {'$exists': True}}, {'xref': 1})
+        # get the xref docs count
+        if docs.count() > 0:
+            print("%s \t %d" % (db_name, docs.count()))
+        for doc in docs:
             for xref in dict2list(doc['xref']):
                 g.add_edge(doc['_id'], xref)
     return g
@@ -89,6 +93,6 @@ def id_mapping_test():
 
 
 if __name__ == "__main__":
-    get_db_info()
-    get_ids_info()
+    # get_db_info()
+    # get_ids_info()
     id_mapping_test()

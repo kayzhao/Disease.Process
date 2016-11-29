@@ -1,10 +1,10 @@
 __author__ = 'kayzhao'
 
 from pymongo import MongoClient
-from utils.mongo import get_src_conn
+
 
 def getDBTypes():
-    from databuild.utils import get_types, compare_types
+    from utils.typeutils import get_types, compare_types
 
     print("typing")
     client = MongoClient('mongodb://zkj1234:zkj1234@192.168.1.113:27017/disease')

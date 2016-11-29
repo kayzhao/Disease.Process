@@ -313,5 +313,7 @@ def parse(mongo_collection=None, drop=True):
 
     print("------------orphanet data parsed success--------------")
 
-    # if __name__ == '__main__':
-    # parse()
+
+if __name__ == '__main__':
+    client = MongoClient('mongodb://zkj1234:zkj1234@192.168.1.113:27017/disease')
+    parse(client.disease.orphanet)

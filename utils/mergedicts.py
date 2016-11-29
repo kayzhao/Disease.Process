@@ -10,7 +10,7 @@ def f1(d1, d2):
 def f2(d1, d2):
     # python2 use +
     # return dict(d1.items() +  d2.items())
-    # python2 use |
+    # python3 use |
     return dict(d1.items() | d2.items())
 
 
