@@ -30,11 +30,11 @@ def graph_to_d(graph):
 
     # for mongo insertion
     for node in nodes:
-        node['_id'] = node['id'].lower()
+        node['_id'] = node['id'].upper()
         if "alt_id" in node:
-            node['alt_id'] = [x.lower() for x in node['alt_id']]
+            node['alt_id'] = [x.upper() for x in node['alt_id']]
         if "is_a" in node:
-            node['is_a'] = [x.lower() for x in node['is_a']]
+            node['is_a'] = [x.upper() for x in node['is_a']]
         if "property_value" in node:
             del node['property_value']
         del node['id']
@@ -65,18 +65,18 @@ def parse_def(line):
 
 def parse_xref(xrefs):
     xrefs = [x for x in xrefs if ":" in x]
-    xrefs = [x.split(":", 1)[0].lower() + ":" + x.split(":", 1)[1] for x in xrefs]
+    xrefs = [x.split(":", 1)[0].upper() + ":" + x.split(":", 1)[1] for x in xrefs]
     # # <--- this is different between HPO and DO
     xrefs = [x.split(" ", 1)[0] for x in xrefs]
     for n, xref in enumerate(xrefs):
-        if xref.startswith("msh:"):
-            xrefs[n] = "mesh:" + xref.split(":", 1)[1]
-        if xref.startswith("ordo:"):
-            xrefs[n] = "orphanet:" + xref.split(":", 1)[1]
-        if xref.startswith("umls:"):
-            xrefs[n] = "umls_cui:" + xref.split(":", 1)[1]
+        if xref.startswith("MSH:"):
+            xrefs[n] = "MESH:" + xref.split(":", 1)[1]
+        if xref.startswith("ORDO:"):
+            xrefs[n] = "ORPHANET:" + xref.split(":", 1)[1]
+        if xref.startswith("UMLS:"):
+            xrefs[n] = "UMLS_CUI:" + xref.split(":", 1)[1]
         if xref.startswith("icd-10:"):
-            xrefs[n] = "icd10cm:" + xref.split(":", 1)[1]
+            xrefs[n] = "ICD10CM:" + xref.split(":", 1)[1]
     return list2dict(xrefs)
 
 
@@ -109,10 +109,12 @@ def parse(mongo_collection=None, drop=True):
                 # # v--- this is different between HPO and DO
                 value['xref'] = {k: v for k, v in value['xref'].items() if k not in {"hpo", "ddd"}}
 
-    db.insert_many(d.values())
+    # db.insert_many(d.values())
+    db.insert_many(list(d.values()))
     print("insert into mongodb success")
     print("------------hpo data parsed success--------------")
 
 
 if __name__ == '__main__':
-    parse()
+    client = MongoClient('mongodb://kayzhao:zkj1234@192.168.1.119:27017/src_disease')
+    parse(client.src_disease.hpo)

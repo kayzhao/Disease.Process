@@ -80,8 +80,8 @@ def load_mesh_desc():
     # print(tuple(l))
     #
     # for k, l in filterfalse(lambda x: x[0], groupby(mesh_desc, lambda x: x == "*NEWRECORD")):
-    #     print(k)
-    #     print(tuple(l))
+    # print(k)
+    # print(tuple(l))
 
     gb = filterfalse(lambda x: x[0], groupby(mesh_desc, lambda x: x == "*NEWRECORD"))
     ds = []
@@ -123,7 +123,7 @@ def load_mesh_desc():
             continue
         d['semantic_type_id'] = d['semantic_type']
         d['semantic_type'] = [semantic_types[c] for c in d['semantic_type']]
-        d['_id'] = "mesh:" + d['_id']
+        d['_id'] = "MESH:" + d['_id']
         mesh_terms.append(dict(d))
     return mesh_terms
 
@@ -203,7 +203,7 @@ def load_mesh_supp():
             continue
         d['semantic_type_id'] = d['semantic_type']
         d['semantic_type'] = [semantic_types[c] for c in d['semantic_type']]
-        d['_id'] = "mesh:" + d['_id']
+        d['_id'] = "MESH:" + d['_id']
         mesh_supp_terms.append(dict(d))
 
     return mesh_supp_terms
@@ -229,5 +229,7 @@ def parse(mongo_collection=None, drop=True):
     print("insert mesh supp success")
     print("------------mesh data parsed success--------------")
 
-    # if __name__ == '__main__':
-    # parse()
+
+if __name__ == '__main__':
+    client = MongoClient('mongodb://kayzhao:zkj1234@192.168.1.119:27017/src_disease')
+    parse(client.src_disease.mesh)

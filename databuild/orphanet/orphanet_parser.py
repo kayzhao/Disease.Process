@@ -35,7 +35,7 @@ def parse_ordo():
     del df['obsolete']
 
     for col in ['parents', 'part_of', 'tree_view', 'id']:
-        df[col] = df[col].str.replace("http://www.orpha.net/ORDO/", "").str.replace("_", ":").str.lower()
+        df[col] = df[col].str.replace("http://www.orpha.net/ORDO/", "").str.replace("_", ":").str.upper()
     list_attribs = ['synonyms', 'parents', 'part_of', 'tree_view', 'alternative_term']
     for col in list_attribs:
         df[col] = df[col].str.split("|").copy()
@@ -56,24 +56,25 @@ def parse_xref(d):
     tree = et.parse(xref_path)
     root = tree.getroot()
 
-    id_replace = {"umls": "umls_cui",
-                  "icd-10": "icd10cm"}
+    id_replace = {"UMLS": "UMLS_CUI",
+                  "ICD-10": "ICD10CM",
+                  "MeSH": "MESH"}
     for disease in root.find("DisorderList"):
         name = disease.find("Name").text
-        orpha = "orphanet:" + disease.find("OrphaNumber").text
+        orpha = "ORPHANET:" + disease.find("OrphaNumber").text
         references = disease.findall("ExternalReferenceList/ExternalReference")
         mapping = defaultdict(list)
         xrefs = []
         for ref in references:
-            source = ref.find("Source").text.lower()
+            source = ref.find("Source").text.upper()
             source = id_replace.get(source, source)
             reference = ref.find("Reference").text
             mapping_relation = ref.find("DisorderMappingRelation/Name").text.split(" ", 1)[0]
-            if source == "icd10cm":
+            if source == "ICD10CM":
                 reference = reference.replace("-", "").replace("*", "").replace("+", "")
             xref = source + ":" + reference
             mapping[mapping_relation].append(xref)
-            if mapping_relation in {'E', 'BTNT'}:
+            if mapping_relation in {'E', 'NTBT', 'BTNT'}:
                 xrefs.append(xref)
         xrefs = list2dict(xrefs)
         synonyms = [x.text for x in disease.findall("SynonymList/Synonym")]
@@ -118,18 +119,23 @@ def parse_prev():
     d = defaultdict(lambda: defaultdict(list))
     for disease in root.find("DisorderList"):
         name = disease.find("Name").text
-        orpha = "orphanet:" + disease.find("OrphaNumber").text
+        orpha = "ORPHANET:" + disease.find("OrphaNumber").text
         disease_type = disease.find("DisorderType/Name").text
+        # print(orpha + "\t" + name + "\t" + disease_type)
         prevalences = disease.findall("PrevalenceList/Prevalence")
         for prev in prevalences:
             source = prev.find("Source").text
             prevalence_type = prev.find("PrevalenceType/Name").text
             prevalence_qual = prev.find("PrevalenceQualification/Name").text
             prevalence_geo = prev.find("PrevalenceGeographic/Name").text
-            prevalence_val_status = prev.find("PrevalenceValidationStatus/Name").text
+            if prev.find("PrevalenceValidationStatus/Name") is not None:
+                prevalence_val_status = prev.find("PrevalenceValidationStatus/Name").text
             valmoy = prev.find("ValMoy").text
-            prev_d = {'source': source, 'prevalence_type': prevalence_type, 'prevalence_qualification': prevalence_qual,
-                      'prevalence_geographic': prevalence_geo, 'prevalence_validation_status': prevalence_val_status,
+            prev_d = {'source': source,
+                      'prevalence_type': prevalence_type,
+                      'prevalence_qualification': prevalence_qual,
+                      'prevalence_geographic': prevalence_geo,
+                      'prevalence_validation_status': prevalence_val_status,
                       'mean_value': float(valmoy) if valmoy != '0.0' else None}
 
             if prev.find("PrevalenceClass/Name") is not None:
@@ -163,7 +169,7 @@ def parse_ages(d):
     root = tree.getroot()
 
     for disease in root.find("DisorderList"):
-        orpha = "orphanet:" + disease.find("OrphaNumber").text
+        orpha = "ORPHANET:" + disease.find("OrphaNumber").text
         aoo = [x.find("Name").text for x in disease.findall("AverageAgeOfOnsetList/AverageAgeOfOnset")]
         aod = [x.find("Name").text for x in disease.findall("AverageAgeOfDeathList/AverageAgeOfDeath")]
         toi = [x.find("Name").text for x in disease.findall("TypeOfInheritanceList/TypeOfInheritance")]
@@ -215,13 +221,13 @@ def parse_hpo(d):
     tree = et.parse(hpo_path)
     root = tree.getroot()
     for disease in root.find("DisorderList"):
-        orpha = "orphanet:" + disease.find("OrphaNumber").text
+        orpha = "ORPHANET:" + disease.find("OrphaNumber").text
         associations = disease.findall("HPODisorderAssociationList/HPODisorderAssociation")
         for ass in associations:
             hpo_id = ass.find("HPO/HPOId").text
             hpo_name = ass.find("HPO/HPOTerm").text
             frequency = ass.find("HPOFrequency/Name").text
-            pheno_d = {'phenotype_id': hpo_id.lower(), 'phenotype_name': hpo_name,
+            pheno_d = {'phenotype_id': hpo_id.upper(), 'phenotype_name': hpo_name,
                        'frequency': frequency}
             if ass.find("DiagnosticCriteria/Name") is not None:
                 pheno_d['diagnostic_criteria'] = ass.find("DiagnosticCriteria/Name").text
@@ -261,7 +267,7 @@ def parse_gene(d):
     gene_d = {}
     dga_d = defaultdict(list)
     for disease in root.find("DisorderList"):
-        orpha = "orphanet:" + disease.find("OrphaNumber").text
+        orpha = "ORPHANET:" + disease.find("OrphaNumber").text
         genes = disease.findall("GeneList/Gene")
         for gene in genes:
             synonyms = [x.text for x in gene.findall("SynonymList/Synonym")]
@@ -297,7 +303,8 @@ def parse(mongo_collection=None, drop=True):
     d = parse_ordo()
     parse_xref(d)
     db.insert_many(list(d.values()))
-
+    print("insert ordo data success")
+    print("parsing the prev/age/hpo/gene data")
     d = parse_prev()
     parse_ages(d)
     parse_hpo(d)
@@ -306,14 +313,15 @@ def parse(mongo_collection=None, drop=True):
     d = {k: dict(v) for k, v in d.items()}
     for k, v in d.items():
         v['_id'] = k
-    dlist = list(d.values())
 
-    for dd in dlist:
+    for dd in list(d.values()):
+        # Mongodb V2.4 error:Mod on _id not allowed,But Mongodb V3.0+ no
         db.update_one({'_id': dd['_id']}, {'$set': dd}, upsert=True)
 
     print("------------orphanet data parsed success--------------")
 
 
 if __name__ == '__main__':
-    client = MongoClient('mongodb://zkj1234:zkj1234@192.168.1.113:27017/disease')
-    parse(client.disease.orphanet)
+    client = MongoClient('mongodb://kayzhao:zkj1234@192.168.1.119:27017/src_disease')
+    # client = MongoClient('mongodb://zkj1234:zkj1234@192.168.1.113:27017/src_disease')
+    parse(client.src_disease.orphanet)

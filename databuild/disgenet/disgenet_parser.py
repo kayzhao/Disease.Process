@@ -22,7 +22,7 @@ def process_gene(file_path_gene_disease):
     for did, subdf in df.groupby("_id"):
         records = subdf.to_dict(orient='records')
         records = [{k: v for k, v in record.items() if k not in {'_id', 'label', 'description'}} for record in records]
-        drecord = {'_id': did.replace("umls", "umls_cui"), 'genes': records}
+        drecord = {'_id': did.replace("umls", "UMLS_CUI"), 'genes': records}
         d.append(drecord)
     return {x['_id']: x for x in d}
 
@@ -54,7 +54,7 @@ def process_snp(file_path_snp_disease):
             if 'pubmed' in record:
                 record['pubmed'] = int(record['pubmed'])
         records = [{k: v for k, v in record.items() if k not in {'_id', 'label'}} for record in records]
-        drecord = {'_id': did.replace("umls", "umls_cui"), 'snps': records}
+        drecord = {'_id': did.replace("umls", "UMLS_CUI"), 'snps': records}
         d.append(drecord)
     return {x['_id']: x for x in d}
 
@@ -85,9 +85,12 @@ def parse(mongo_collection=None, drop=True):
     # print(len(d))
     print("build dict within gene and snp together")
 
-    db.insert_many(d.values())
+    # db.insert_many(d.values())
+    db.insert_many(list(d.values()))
     print("insert into mongodb success")
     print("------------disgenet data parsed success--------------")
 
-    # if __name__ == '__main__':
-    # parse()
+
+if __name__ == '__main__':
+    client = MongoClient('mongodb://kayzhao:zkj1234@192.168.1.119:27017/src_disease')
+    parse(client.src_disease.disgenet)

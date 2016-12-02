@@ -30,7 +30,7 @@ def parse_mimTitles():
     mimTitles.title = mimTitles.title.str.strip()
     mimTitles.symbol = mimTitles.symbol.str.strip()
     mimTitles.rename(columns={'Mim Number': "_id"}, inplace=True)
-    mimTitles._id = mimTitles._id.apply(lambda x: "omim:" + x)
+    mimTitles._id = mimTitles._id.apply(lambda x: "OMIM:" + x)
     # print(mimTitles.head())
 
     mimTitles_records = [{k: v for k, v in zip(mimTitles.columns, list(record)[1:])} for record in
@@ -102,7 +102,7 @@ def parse_mim2gene():
     mim2genes = pd.read_csv(mim2gene_path, sep='\t', comment='#', names=mim2gene_names)
     mim2genes.rename(columns=columns_rename, inplace=True)
     mim2genes._id = mim2genes._id.astype(str)
-    mim2genes._id = mim2genes._id.apply(lambda x: "omim:" + x)
+    mim2genes._id = mim2genes._id.apply(lambda x: "OMIM:" + x)
     # print(mim2genes.head())
 
     # change to dict
@@ -143,8 +143,9 @@ def parse(mongo_collection=None, drop=True):
         d[key] = dict(mimTitles_records.get(key, {}), **mim2gene_records.get(key, {}))
 
     print(len(d))
-    for x in d.values():
-        db.insert_one(x)
+    db.insert_many(list(d.values()))
+    # for x in d.values():
+    # db.insert_one(x)
     print("------------omim data parsed success--------------")
 
 
@@ -154,4 +155,6 @@ if __name__ == "__main__":
     # client = MongoClient('mongodb://zkj1234:zkj1234@192.168.1.113:27017/disease')
     # parse(client.disease.omim)
     # parse()
-    parse_mim2gene()
+    # parse_mim2gene()
+    client = MongoClient('mongodb://kayzhao:zkj1234@192.168.1.119:27017/src_disease')
+    parse(client.src_disease.omim)

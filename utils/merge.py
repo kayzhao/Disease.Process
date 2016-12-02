@@ -30,7 +30,7 @@ def get_db_info():
         print("%s \t %d" % (k, v))
 
 
-def get_equiv_doid(g, did):
+def get_equiv_doid(g, did, cutoff=2):
     """
     For a given ID, get the DOIDs it is equivalent to within 2 hops.
     """
@@ -38,7 +38,7 @@ def get_equiv_doid(g, did):
         return [did]
     if did not in g:
         return []
-    equiv = list(nx.single_source_shortest_path_length(g, did, cutoff=2).keys())
+    equiv = list(nx.single_source_shortest_path_length(g, did, cutoff=cutoff).keys())
     return [x for x in equiv if x.startswith("doid:")]
 
 
@@ -48,11 +48,11 @@ def build_id_graph():
         db = get_src_conn().disease[db_name]
         docs = db.find({'xref': {'$exists': True}}, {'xref': 1})
         # get the xref docs count
-        if docs.count() > 0:
-            print("%s \t %d" % (db_name, docs.count()))
+        # if docs.count() > 0:
+        # print("%s \t %d" % (db_name, docs.count()))
         for doc in docs:
             for xref in dict2list(doc['xref']):
-                g.add_edge(doc['_id'], xref)
+                g.add_edge(doc['_id'].upper(), xref.upper())
     return g
 
 
@@ -95,4 +95,8 @@ def id_mapping_test():
 if __name__ == "__main__":
     # get_db_info()
     # get_ids_info()
-    id_mapping_test()
+    # id_mapping_test()
+    g = build_id_graph()
+    # nx.write_edgelist(g, "C:/Users/Administrator/Desktop/ids.txt")
+    for x in get_equiv_doid(g, "mesh:D010211", 100):
+        print(x)

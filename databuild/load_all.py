@@ -38,15 +38,15 @@ def parse_all():
     from databuild.ndfrt import ndfrt_parser
     from databuild.omim import omim_parser
 
-    client = MongoClient('mongodb://zkj1234:zkj1234@192.168.1.113:27017/disease')
-    # do_parser.parse(client.disease.do, False)
-    # disgenet_parser.parse(client.disease.disgenet, False)
-    # hpo_parser.parse(client.disease.hpo, False)
-    # mesh_parser.parse(client.disease.mesh, False)
-    # ctd_parser.parse(client.disease.ctd)
-    # ndfrt_parser.parse(client.disease.ndfrt)
-    omim_parser.parse(client.disease.omim)
-    # orphanet_parser.parse(client.disease.orphanet)
+    client = MongoClient('mongodb://zkj1234:zkj1234@192.168.1.113:27017/src_disease')
+    do_parser.parse(client.src_disease.do, False)
+    disgenet_parser.parse(client.src_disease.disgenet, False)
+    hpo_parser.parse(client.src_disease.hpo, False)
+    mesh_parser.parse(client.src_disease.mesh, False)
+    ctd_parser.parse(client.src_disease.ctd)
+    ndfrt_parser.parse(client.src_disease.ndfrt)
+    omim_parser.parse(client.src_disease.omim)
+    orphanet_parser.parse(client.src_disease.orphanet)
 
 
 def merge_one(db_name):

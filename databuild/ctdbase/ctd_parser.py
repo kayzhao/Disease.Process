@@ -26,11 +26,11 @@ def parse_diseaseid(did: str):
     if an ID starts with 'C' or 'D', its MESH, if its an integer: 'OMIM'
     """
     if did.startswith("OMIM:") or did.startswith("MESH:"):
-        return did.split(":", 1)[0].lower() + ":" + did.split(":", 1)[1]
+        return did.split(":", 1)[0].upper() + ":" + did.split(":", 1)[1]
     if did.startswith('C') or did.startswith('D'):
-        return 'mesh:' + did
+        return 'MESH:' + did
     if did.isdigit():
-        return "omim:" + did
+        return "OMIM:" + did
     raise ValueError(did)
 
 
@@ -109,7 +109,7 @@ def process_chemicals(db, f, relationship: str):
             db.update_one({'_id': diseaseID}, {'$set': {relationship.lower(): sub}}, upsert=True)
 
 
-def process_genes(db, f, relationship:str):
+def process_genes(db, mongo_collection, f, relationship:str):
     """
     # for the genes file, which is enormous, we need to do something different
     # basically same as others, but in chunks
@@ -135,21 +135,30 @@ def process_genes(db, f, relationship:str):
             sub = subdf[columns_keep].to_dict(orient="records")
             # get rid of nulls
             sub = [{k: v for k, v in s.items() if v == v} for s in sub]
+            # dump 2 gridfs while the BSON document is to large
             file_name = diseaseID + '_ctd_' + relationship + '.obj'
             dump2gridfs(sub, file_name, db)
-            # db.update_one({'_id': diseaseID}, {'$push': {relationship: {'$each': sub}}}, upsert=True)
+            mongo_collection.update_one(
+                {'_id': diseaseID},
+                {'$push': {
+                    relationship: {
+                        'filename': file_name,
+                        'mode': 'gridfs'
+                    }
+                }}, upsert=True)
 
 
-def parse(mongo_collection=None, drop=True):
-    if mongo_collection:
-        db = mongo_collection
+def parse(db=None, drop=True):
+    if db:
+        db = db
+        mongo_collection = db.ctd
     else:
         client = MongoClient()
-        db = client.disease.ctd
+        db = client.disease
+        mongo_collection = client.disease.ctd
     if drop:
-        db.drop()
+        mongo_collection.drop()
 
-    # client = MongoClient('mongodb://zkj1234:zkj1234@192.168.1.113:27017/disease')
     print("------------ctdbase data parsing--------------")
     for relationship, file_path in relationships.items():
         print(relationship + "\t" + file_path)
@@ -157,17 +166,19 @@ def parse(mongo_collection=None, drop=True):
             if relationship == "genes":
                 print("parsing the  " + relationship + "data")
                 # use gridfs , the param db must be database not database.collection
-                process_genes(client.disease, f, relationship)
+                process_genes(db, mongo_collection, f, relationship)
             elif relationship == "chemicals":
                 print("parsing the  " + relationship + "data")
-                process_chemicals(db, f, relationship)
+                process_chemicals(mongo_collection, f, relationship)
             else:
                 print("parsing the  " + relationship + "data")
                 df = parse_csv_to_df(f)
-                parse_df(db, df, relationship)
+                parse_df(mongo_collection, df, relationship)
 
     print("------------ctdbase data parsed success--------------")
 
 
 if __name__ == '__main__':
-    parse()
+    client = MongoClient('mongodb://kayzhao:zkj1234@192.168.1.119:27017/src_disease')
+    parse(client.src_disease)
+    # parse(client.src_disease)

@@ -31,11 +31,11 @@ def graph_to_d(graph):
 
     # for mongo insertion
     for node in nodes:
-        node['_id'] = node['id'].lower()
+        node['_id'] = node['id'].upper()
         if "alt_id" in node:
-            node['alt_id'] = [x.lower() for x in node['alt_id']]
+            node['alt_id'] = [x.upper() for x in node['alt_id']]
         if "is_a" in node:
-            node['is_a'] = [x.lower() for x in node['is_a']]
+            node['is_a'] = [x.upper() for x in node['is_a']]
         if "property_value" in node:
             del node['property_value']
         del node['id']
@@ -57,7 +57,7 @@ def parse_def(line: str):
     Parse definition field.
     Returns a tuple(definition, list of crosslink urls)
 
-    >>> parse_def("\'A description.\' [url:http://www.ncbi.goc/123, url:http://www.ncbi.nlm.nih.gov/pubmed/15318016]")
+    parse_def("\'A description.\' [url:http://www.ncbi.goc/123, url:http://www.ncbi.nlm.nih.gov/pubmed/15318016]")
     ('A description.', ['url:http\\://www.ncbi.goc/123', 'url:http\\://www.ncbi.nlm.nih.gov/pubmed/1531801'])
 
     """
@@ -75,10 +75,10 @@ def parse_def(line: str):
 def parse_xref(xrefs: List[str]):
     """
     Parse xref field. Input is list of strings (xref IDs)
-    Normalizes prefix strings (MSH -> MESH, ORDO -> Orphanet) and converts prefix to lowercase
+    Normalizes prefix strings (MSH -> MESH, ORDO -> Orphanet) and converts prefix to uppercase
     Returns dict[ID prefix: list of IDs without prefix]
 
-    >>> parse_xref(['MSH:D006954',  'SNOMEDCT_US_2016_03_01:190781009',  'SNOMEDCT_US_2016_03_01:34349009',  'UMLS_CUI:C0020481'])
+    parse_xref(['MSH:D006954',  'SNOMEDCT_US_2016_03_01:190781009',  'SNOMEDCT_US_2016_03_01:34349009',  'UMLS_CUI:C0020481'])
     {'MESH': ['D006954'],
      'SNOMEDCT_US_2016_03_01': ['190781009', '34349009'],
      'UMLS_CUI': ['C0020481']}
@@ -86,12 +86,12 @@ def parse_xref(xrefs: List[str]):
     """
 
     xrefs = [x for x in xrefs if ":" in x]
-    xrefs = [x.split(":", 1)[0].lower() + ":" + x.split(":", 1)[1] for x in xrefs]
+    xrefs = [x.split(":", 1)[0].upper() + ":" + x.split(":", 1)[1] for x in xrefs]
     for n, xref in enumerate(xrefs):
-        if xref.startswith("msh:"):
-            xrefs[n] = "mesh:" + xref.split(":", 1)[1]
-        if xref.startswith("ordo:"):
-            xrefs[n] = "orphanet:" + xref.split(":", 1)[1]
+        if xref.startswith("MSH:"):
+            xrefs[n] = "MESH:" + xref.split(":", 1)[1]
+        if xref.startswith("ORDO:"):
+            xrefs[n] = "ORPHANET:" + xref.split(":", 1)[1]
     return list2dict(xrefs)
 
 
@@ -122,10 +122,12 @@ def parse(mongo_collection=None, drop=True):
                 else:
                     value['xref'] = parse_xref(ref)
 
-    db.insert_many(d.values())
+    # db.insert_many(d.values())
+    db.insert_many(list(d.values()))
     print("insert into mongodb success")
     print("------------do data parsed success--------------")
 
 
-# if __name__ == '__main__':
-# parse()
+if __name__ == '__main__':
+    client = MongoClient('mongodb://kayzhao:zkj1234@192.168.1.119:27017/src_disease')
+    parse(client.src_disease.do)

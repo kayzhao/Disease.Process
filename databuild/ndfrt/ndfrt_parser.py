@@ -30,13 +30,13 @@ class NDFRT_item:
 
     def format_disease(self):
         d = {'name': self.props['Display_Name'][0],
-             '_id': 'umls_cui:' + self.props['UMLS_CUI'][0],
+             '_id': 'UMLS_CUI:' + self.props['UMLS_CUI'][0],
              'synonyms': self.props.get('Synonym', []),
              'xref': {
-                 'mesh': self.props.get('MeSH_DUI', []),
-                 'nui': self.props.get('NUI', []),
-                 'rxnorm_cui': self.props.get('RxNorm_CUI', []),
-                 'snomedct_us_2016_03_01': self.props.get('SNOMED_CID', []),
+                 'MESH': self.props.get('MeSH_DUI', []),
+                 'MUI': self.props.get('NUI', []),
+                 'RXNORM_CUI': self.props.get('RxNorm_CUI', []),
+                 'SNOMEDCT_US_2016_03_01': self.props.get('SNOMED_CID', []),
              },
              'drugs_used_for_treatment': self.drug_used_for_treatment
         }
@@ -104,9 +104,10 @@ def parse(mongo_collection=None, drop=True):
     diseases = _parse()
     diseases = {x.format_disease()['_id']: x.format_disease() for x in diseases.values()}
 
-    db.insert_many(diseases.values())
+    db.insert_many(list(diseases.values()))
     print("------------ndfrt data parsed success--------------")
 
 
 if __name__ == '__main__':
-    parse()
+    client = MongoClient('mongodb://kayzhao:zkj1234@192.168.1.119:27017/src_disease')
+    parse(client.src_disease.ndfrt)
