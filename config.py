@@ -15,8 +15,7 @@ db_names = [
     'ctd',
     'ndfrt',
     'orphanet',
-    'kegg',
-    'pharmacotherapydb'
+    'kegg'
 ]
 
 LOGGER_NAME = "disease.data"
@@ -42,9 +41,9 @@ JSONLD_CONTEXT_PATH = ''
 # Mydeisease HUB VARS  #
 # ################ #
 
-DATA_SRC_SERVER = '192.168.1.113'
+DATA_SRC_SERVER = '192.168.1.100'
 DATA_SRC_PORT = 27017
-DATA_SRC_DATABASE = 'disease'
+DATA_SRC_DATABASE = 'src_disease'
 DATA_SRC_MASTER_COLLECTION = 'src_master'  # for metadata of each src collections
 DATA_SRC_DUMP_COLLECTION = 'src_dump'  # for src data download information
 DATA_SRC_BUILD_COLLECTION = 'src_build'  # for src data build information
@@ -57,7 +56,7 @@ DATA_TARGET_MASTER_COLLECTION = 'db_master'
 # webserver to show hub status
 DATA_WWW_ROOT_URL = "http://localhost:8000"
 
-DATA_SERVER_USERNAME = 'zkj1234'
+DATA_SERVER_USERNAME = 'kayzhao'
 DATA_SERVER_PASSWORD = 'zkj1234'
 
 LOG_FOLDER = 'logs'

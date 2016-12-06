@@ -3,13 +3,14 @@ __author__ = 'kayzhao'
 import re
 import pandas as pd
 from pymongo import MongoClient
-from databuild.kegg import *
+from databuild.umls import *
 from utils.common import list2dict
 
 
 def load_kegg_data():
     col_names = ['_id', 'name', 'description', 'category', 'drugs', 'xref']
-    df = pd.read_csv(diseases_path, sep="\t", comment='#', names=col_names)
+    df = pd.read_csv(umls_xref_path, sep="\t", comment='#', names=col_names)
+    # print(len(df.to_records()))
     # change to list of dict
     d = []
     id_replace = {"UMLS": "UMLS_CUI",

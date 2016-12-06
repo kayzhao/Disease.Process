@@ -34,9 +34,9 @@ class NDFRT_item:
              'synonyms': self.props.get('Synonym', []),
              'xref': {
                  'MESH': self.props.get('MeSH_DUI', []),
-                 'MUI': self.props.get('NUI', []),
+                 'NUI': self.props.get('NUI', []),
                  'RXNORM_CUI': self.props.get('RxNorm_CUI', []),
-                 'SNOMEDCT_US_2016_03_01': self.props.get('SNOMED_CID', []),
+                 'SNOMEDCT': self.props.get('SNOMED_CID', []),
              },
              'drugs_used_for_treatment': self.drug_used_for_treatment
         }

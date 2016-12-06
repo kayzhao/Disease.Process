@@ -87,11 +87,24 @@ def parse_xref(xrefs: List[str]):
 
     xrefs = [x for x in xrefs if ":" in x]
     xrefs = [x.split(":", 1)[0].upper() + ":" + x.split(":", 1)[1] for x in xrefs]
+    id_replace = {
+        "UMLS": "UMLS_CUI",
+        "ICD-9": "ICD9CM",
+        "ICD9": "ICD9CM",
+        "ICD10": "ICD10CM",
+        "ICD-10": "ICD10CM",
+        "MeSH": "MESH",
+        "MSH": "MESH",
+        "ORDO": "ORPHANET",
+        "SNOMEDCT_US_2016_03_01": "SNOMEDCT",
+        "SNOMEDCT_US_2015_03_01": "SNOMEDCT",
+        "URL`": "URL",
+        "HPO": "HP"
+    }
     for n, xref in enumerate(xrefs):
-        if xref.startswith("MSH:"):
-            xrefs[n] = "MESH:" + xref.split(":", 1)[1]
-        if xref.startswith("ORDO:"):
-            xrefs[n] = "ORPHANET:" + xref.split(":", 1)[1]
+        source = xref.split(":", 1)[0]
+        source = id_replace.get(source, source)
+        xrefs[n] = source + ":" + xref.split(":", 1)[1]
     return list2dict(xrefs)
 
 

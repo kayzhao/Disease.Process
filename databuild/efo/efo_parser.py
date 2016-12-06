@@ -1,13 +1,15 @@
 import re
 
+from typing import List
 from networkx.readwrite import json_graph
 from pymongo import MongoClient
 
 from utils.obo import read_obo
 from utils.common import list2dict
-from databuild.hpo import *
+from databuild.efo import *
+from utils.mongo import get_src_conn
 
-# # This is copied from diseaseontology.parser with modifications.
+
 def graph_to_d(graph):
     """
     :param graph: A networkx graph made from reading ontology
@@ -46,12 +48,20 @@ def graph_to_d(graph):
     return d
 
 
-def parse_synonym(line):
+def parse_synonym(line: str):
     # line = "synonym: \"The other white meat\" EXACT MARKETING_SLOGAN [MEAT:00324, BACONBASE:03021]"
     return line[line.index("\"") + 1:line.rindex("\"")] if line.count("\"") == 2 else line
 
 
-def parse_def(line):
+def parse_def(line: str):
+    """
+    Parse definition field.
+    Returns a tuple(definition, list of crosslink urls)
+
+    parse_def("\'A description.\' [url:http://www.ncbi.goc/123, url:http://www.ncbi.nlm.nih.gov/pubmed/15318016]")
+    ('A description.', ['url:http\\://www.ncbi.goc/123', 'url:http\\://www.ncbi.nlm.nih.gov/pubmed/1531801'])
+
+    """
     definition = line[line.index("\"") + 1:line.rindex("\"")] if line.count("\"") == 2 else line
     if line.endswith("]") and line.count("["):
         left_bracket = [m.start() for m in re.finditer('\[', line)]
@@ -63,11 +73,21 @@ def parse_def(line):
         return definition, None
 
 
-def parse_xref(xrefs):
+def parse_xref(xrefs: List[str]):
+    """
+    Parse xref field. Input is list of strings (xref IDs)
+    Normalizes prefix strings (MSH -> MESH, ORDO -> Orphanet) and converts prefix to uppercase
+    Returns dict[ID prefix: list of IDs without prefix]
+
+    parse_xref(['MSH:D006954',  'SNOMEDCT_US_2016_03_01:190781009',  'SNOMEDCT_US_2016_03_01:34349009',  'UMLS_CUI:C0020481'])
+    {'MESH': ['D006954'],
+     'SNOMEDCT_US_2016_03_01': ['190781009', '34349009'],
+     'UMLS_CUI': ['C0020481']}
+
+    """
+
     xrefs = [x for x in xrefs if ":" in x]
-    xrefs = [x.split(":", 1)[0].upper() + ":" + x.split(":", 1)[1] for x in xrefs]
-    # # <--- this is different between HPO and DO
-    xrefs = [x.split(" ", 1)[0] for x in xrefs]
+    xrefs = [x.split(":", 1)[0].replace('\n', '').upper() + ":" + x.split(":", 1)[1] for x in xrefs]
     id_replace = {
         "UMLS": "UMLS_CUI",
         "ICD-9": "ICD9CM",
@@ -80,12 +100,26 @@ def parse_xref(xrefs):
         "SNOMEDCT_US_2016_03_01": "SNOMEDCT",
         "SNOMEDCT_US_2015_03_01": "SNOMEDCT",
         "URL`": "URL",
-        "HPO": "HP"
+        "HPO": "HP",
+        'KEGG DRUG': 'KEGG_DRUG',
+        'KEGG COMPOUND': 'KEGG_COMPOUND',
+        'LIPID MAPS': 'LIPID_MAPS',
+        'NIST CHEMISTRY WEBBOOK': 'NIST_CHEMISTRY_WEBBOOK'
     }
+
     for n, xref in enumerate(xrefs):
+        if xref.startswith(('HTTP', 'PDF')):
+            xrefs[n] = "URL:" + xref
+            continue
+        if xref.startswith(('KEGG', 'LIPID', 'NIST')):
+            source = xref.split(":", 1)[0]
+            xref = id_replace.get(source, source) + ":" + xref.split(":", 1)[1]
+        # <--- this is different between EFO and DO and HPO
+        xref = xref.split(" ", 1)[0]
         source = xref.split(":", 1)[0]
         source = id_replace.get(source, source)
         xrefs[n] = source + ":" + xref.split(":", 1)[1]
+    print(xrefs)
     return list2dict(xrefs)
 
 
@@ -94,13 +128,13 @@ def parse(mongo_collection=None, drop=True):
         db = mongo_collection
     else:
         client = MongoClient()
-        db = client.disease.hpo
+        db = client.disease.do
     if drop:
         db.drop()
 
-    print("------------hpo data parsing--------------")
-    graph = read_obo(open(file_path).readlines())
-    print("read hpo obo file success")
+    print("------------efo data parsing--------------")
+    graph = read_obo(open(file_path, encoding='utf-8').readlines())
+    print("read efo obo file success")
     d = graph_to_d(graph)
     print("build the graph to dict")
     for value in d.values():
@@ -115,15 +149,13 @@ def parse(mongo_collection=None, drop=True):
                     value['xref'].update(parse_xref(ref))
                 else:
                     value['xref'] = parse_xref(ref)
-                # # v--- this is different between HPO and DO
-                value['xref'] = {k: v for k, v in value['xref'].items() if k not in {"hpo", "ddd"}}
 
     # db.insert_many(d.values())
     db.insert_many(list(d.values()))
     print("insert into mongodb success")
-    print("------------hpo data parsed success--------------")
+    print("------------efo data parsed success--------------")
 
 
 if __name__ == '__main__':
-    client = MongoClient('mongodb://kayzhao:zkj1234@192.168.1.119:27017/src_disease')
-    parse(client.src_disease.hpo)
+    client = get_src_conn()
+    parse(client.src_disease.efo)

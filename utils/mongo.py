@@ -14,9 +14,17 @@ from utils.common import timesofar
 
 
 def get_conn(server, port):
-    uri = "mongodb://{}:{}@{}:{}/disease".format(DATA_SERVER_USERNAME,
-                                                 DATA_SERVER_PASSWORD,
-                                                 server, port)
+    uri = "mongodb://{}:{}@{}:{}/{}".format(DATA_SERVER_USERNAME,
+                                            DATA_SERVER_PASSWORD,
+                                            server, port, DATA_SRC_DATABASE)
+    client = MongoClient(uri)
+    return client
+
+
+def get_src_db_client():
+    uri = "mongodb://{}:{}@{}:{}/{}".format(DATA_SERVER_USERNAME,
+                                            DATA_SERVER_PASSWORD,
+                                            DATA_SRC_SERVER, DATA_SRC_PORT, DATA_SRC_DATABASE)
     client = MongoClient(uri)
     return client
 
