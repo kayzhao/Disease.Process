@@ -18,4 +18,4 @@ DATA_DIR_KEGG = os.path.join(DATA_DIR, "kegg")
 
 diseases_url = "http://www.kegg.jp/dbget-bin/www_bget?ds:H00001"
 
-diseases_path = os.path.join(DATA_DIR_KEGG, "Kegg_Diseases_AllData.txt")
+diseases_path = os.path.join(DATA_DIR_KEGG, "Kegg_Diseases_All_Data.txt")

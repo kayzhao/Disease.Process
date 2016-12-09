@@ -11,11 +11,21 @@ db_names = [
     'hpo',
     'mesh',
     'omim',
+    'umls',
+    'icd',
+
+    # the bio-disease
+    'kegg',
+    'efo',
+    'snomedct'
+    'pharmgkb',
+
+    # the mydisease.info
     'disgenet',
     'ctd',
     'ndfrt',
     'orphanet',
-    'kegg'
+    'pharmacotherapydb'
 ]
 
 LOGGER_NAME = "disease.data"
@@ -62,8 +72,8 @@ DATA_SERVER_PASSWORD = 'zkj1234'
 LOG_FOLDER = 'logs'
 
 ES_HOST = 'localhost:9500'
-ES_INDEX_NAME = 'genedoc'
-ES_INDEX_TYPE = 'gene'
+ES_INDEX_NAME = 'diseasedoc'
+ES_INDEX_TYPE = 'disease'
 
 species_li = ['human', 'mouse', 'rat', 'fruitfly', 'nematode', 'zebrafish', 'thale-cress', 'frog', 'pig']
 

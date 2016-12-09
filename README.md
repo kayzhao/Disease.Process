@@ -36,5 +36,4 @@
     wget==3.2
 ```
 - MongoDB (>=3.0) **Robomongo**
-- 
 
