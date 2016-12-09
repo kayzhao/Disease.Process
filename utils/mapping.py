@@ -39,37 +39,6 @@ def get_db_info():
         print("%s \t %d" % (k, v))
 
 
-def get_equiv_dtype_id(g, did, cutoff=2, dtype="DOID"):
-    """
-    For a given ID, get the type disease ID,
-    it is equivalent to within default 2 hops.
-    """
-    if did.startswith(dtype):
-        return [did]
-    if did not in g:
-        return []
-    equiv = set(nx.single_source_shortest_path_length(g, did, cutoff=cutoff).keys())
-    return [x for x in equiv if x.startswith(dtype)]
-
-
-def build_id_graph():
-    g = nx.Graph()
-    db_xrefs = defaultdict()
-    for db_name in db_names:
-        db = get_src_conn()[DATA_SRC_DATABASE][db_name]
-        docs = db.find({'xref': {'$exists': True}}, {'xref': 1})
-        all_id_types = set()
-        # get the xref docs count
-        if docs.count() > 0:
-            # print("%s \t %d" % (db_name, docs.count()))
-            for doc in docs:
-                for xref in dict2list(doc['xref']):
-                    g.add_edge(doc['_id'].upper(), xref.upper())
-                    all_id_types.add(xref.upper().split(":", 1)[0])
-            db_xrefs[db_name] = list(all_id_types)
-    return g, db_xrefs
-
-
 def get_db_xrefs():
     print("get the db xref statistics ")
     '''
@@ -93,23 +62,33 @@ def build_did_graph():
     create the id xref graph
     :return:id graph
     '''
-
     id_except_pre = ["URL", "HTTP", "HTTPS", "DOI", "WIKI", "GAID"]
     g = nx.Graph()
     for db_name in db_names:
         db = get_src_conn()[DATA_SRC_DATABASE][db_name]
         docs = db.find({'xref': {'$exists': True}}, {'xref': 1})
-        # get the xref docs count
-        if docs.count() > 0:
-            # print("%s \t %d" % (db_name, docs.count()))
-            for doc in docs:
-                for xref in dict2list(doc['xref']):
-                    if xref.split(":", 1)[0] not in id_except_pre:
-                        g.add_edge(doc['_id'].upper(), xref.upper())
+        for doc in docs:
+            for xref in dict2list(doc['xref']):
+                if xref.split(":", 1)[0] not in id_except_pre:
+                    g.add_edge(doc['_id'].upper(), xref.upper())
     return g
 
 
-def num_dtype_ids_in_sg(g, cutoff=2, dtype="DOID"):
+def get_equiv_dtype_id(g, did, cutoff=2, dtype="DOID"):
+    """
+    For a given ID, get the type disease ID,
+    it is equivalent to within default 2 hops.
+    """
+    if did.startswith(dtype):
+        return [did]
+    if did not in g:
+        return []
+    equiv = set(nx.single_source_shortest_path_length(g, did, cutoff=cutoff).keys())
+    return [x for x in equiv if x.startswith(dtype)]
+
+
+def num_dtype_ids_in_sg(g, cutoff=2, dtype="DO"):
+    print(dtype)
     d = defaultdict(list)
     all_ids = set()
     for db_name in db_names:
@@ -135,21 +114,28 @@ def get_connected_subgraph(g):
     '''
     get the connected component sub graphs
     :param g:
-    :return:list of sub graphs
+    :return:
+        list of sub graphs
+        the distribution
     '''
     if g is None:
         return []
-    print(nx.number_connected_components(g))
+    # print(nx.number_connected_components(g))
     graphs = list(nx.connected_component_subgraphs(g))
     d = []
     for sub in graphs:
         d.append(len(sub.nodes()))
 
+    # get the connected components distribution
+    for k, v in sorted(Counter(d).items()):
+        print("%d\t%d" % (k, v))
+
     return [x for x in graphs], Counter(d)
 
 
-def id_mapping_test(dtype="DOID"):
+def id_mapping_test(dtype="DO"):
     g = build_did_graph()
+    mapping_cuttof = 700
     print("build id graph success")
     print("cuttoff is 1")
     for k, v in num_dtype_ids_in_sg(g, 1, dtype=dtype).items():
@@ -160,7 +146,8 @@ def id_mapping_test(dtype="DOID"):
                 num_mapping += v[n]
             else:
                 num_nomapping = v[n]
-        print("%s\t%d\t%d" % (k, num_nomapping, num_mapping))
+        if num_mapping > mapping_cuttof or num_nomapping > mapping_cuttof:
+            print("%s\t%d\t%d" % (k, num_nomapping, num_mapping))
 
     print("cuttoff is 2")
     for k, v in num_dtype_ids_in_sg(g, 2, dtype=dtype).items():
@@ -171,7 +158,8 @@ def id_mapping_test(dtype="DOID"):
                 num_mapping += v[n]
             else:
                 num_nomapping = v[n]
-        print("%s\t%d\t%d" % (k, num_nomapping, num_mapping))
+        if num_mapping > mapping_cuttof or num_nomapping > mapping_cuttof:
+            print("%s\t%d\t%d" % (k, num_nomapping, num_mapping))
 
     print("cuttoff is 3")
     for k, v in num_dtype_ids_in_sg(g, 3, dtype=dtype).items():
@@ -182,25 +170,44 @@ def id_mapping_test(dtype="DOID"):
                 num_mapping += v[n]
             else:
                 num_nomapping = v[n]
-        print("%s\t%d\t%d" % (k, num_nomapping, num_mapping))
+        if num_mapping > mapping_cuttof or num_nomapping > mapping_cuttof:
+            print("%s\t%d\t%d" % (k, num_nomapping, num_mapping))
 
 
 if __name__ == "__main__":
+    '''
+    get the data info
+    '''
     # get_db_info()
     # get_ids_info()
     # get_db_xrefs()
-    # id_mapping_test(dtype="DOID")
 
+    '''
+    build the disease id xref graph
+    '''
     g = build_did_graph()
-    graphs, counts = get_connected_subgraph(g)
-    for k, v in sorted(counts.items()):
-        print("%d\t%d" % (k, v))
+
+    '''
+    export the graph data
+    '''
     # nx.write_edgelist(g, "C:/Users/Administrator/Desktop/id_xrefs/id_xrefs.txt")
     # nx.write_adjlist(g, "C:/Users/Administrator/Desktop/ids.txt")
 
-    ID = "MESH:D005067"
+    '''
+    disease type id mapping test
+    '''
+    # id_mapping_test(dtype="DOID")
+    id_mapping_test("UMLS_CUI")
+    '''
+    single id test
+    '''
+    # ID = "MESH:D005067"
     # ID = "MESH:D010211"
-    for i in range(1, 10, 1):
-        ids = get_equiv_dtype_id(g, ID, i, dtype="DOID")
-        print("%d \t %s" % (i, len(ids)))
+    # ID = "MESH:D019867"
+    # ID = "MESH:D008219"
+    # for i in range(1, 11, 1):
+    # ids = get_equiv_dtype_id(g, ID, i, dtype="DOID")
+    # print("%d \t %s" % (i, len(ids)))
+    #     print(ids)
+
     print("success")
