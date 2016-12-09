@@ -17,10 +17,10 @@ def load_kegg_data():
     id_replace = {"UMLS": "UMLS_CUI",
                   "ICD-10": "ICD10CM",
                   "MeSH": "MESH"}
-    # df['_id'] = df['_id'].apply(lambda x: "KEGG:" + x)
+    df['_id'] = df['_id'].apply(lambda x: "KEGG:" + x)
     for record in df.apply(lambda x: x.dropna().to_dict(), axis=1):
-        if '_id' in record:
-            record['_id'] = "KEGG:" + record["_id"]
+        # if '_id' in record:
+        # record['_id'] = "KEGG:" + record["_id"]
 
         if 'drugs' in record:
             drugs = []
@@ -33,52 +33,42 @@ def load_kegg_data():
             genes = []
             for x in re.split("\\|", record['genes']):
                 if len(x) > 0:
-                    if '(' in x:
-                        gene_name_type = re.split("[()]", x.split(",", 1)[0])
-                    else:
-                        gene_name_type = re.split(" |[()]", x.split(",", 1)[0])
-                    gene_name_type = [x for x in gene_name_type if len(x) > 0]
-                    gene_refs = re.split(" |[,;]", x.split(",", 1)[1])
-                    gene_refs = [x for x in gene_refs if len(x) > 0]
-                    if len(gene_name_type) > 1:
+                    x = x.strip()
+                    if 'HSA:' in x:
+                        gene_name = x[:x.find("HSA:")].strip().strip(',')
+                        gene_refs = re.split(" |[,;]", x[x.find("HSA:"):])
+                        gene_refs = [x for x in gene_refs if len(x) > 0]
                         genes.append({
-                            'gene_name': gene_name_type[0],
-                            'gene_type': gene_name_type[1],
+                            'gene_name': gene_name,
                             'gene_ref': list2dict(gene_refs)
                         })
                     else:
+                        gene_name = x.strip().strip(',')
                         genes.append({
-                            'gene_name': gene_name_type[0],
-                            'gene_ref': list2dict(gene_refs)
+                            'gene_name': gene_name,
                         })
+            # print(genes)
             record['genes'] = genes
 
         if 'markers' in record:
             markers = []
             for x in re.split("\\|", record['markers']):
                 if len(x) > 0:
-                    # has '()' or not
-                    if '(' in x:
-                        gene_name_type = re.split("[()]", x.split(",", 1)[0])
-                    else:
-                        gene_name_type = re.split(" |[()]", x.split(",", 1)[0])
-                    gene_name_type = [x for x in gene_name_type if len(x) > 0]
-
-                    gene_refs = re.split("[,;]", x.split(",", 1)[1])
-                    gene_refs = [x for x in gene_refs if len(x) > 0]
-
-                    if len(gene_name_type) > 1:
+                    x = x.strip()
+                    if 'HSA:' in x:
+                        gene_name = x[:x.find("HSA:")].strip().strip(',')
+                        gene_refs = re.split(" |[,;]", x[x.find("HSA:"):])
+                        gene_refs = [x for x in gene_refs if len(x) > 0]
                         markers.append({
-                            'gene_name': gene_name_type[0],
-                            'gene_type': gene_name_type[1],
+                            'gene_name': gene_name,
                             'gene_ref': list2dict(gene_refs)
                         })
                     else:
+                        gene_name = x.strip().strip(',')
                         markers.append({
-                            'gene_name': gene_name_type[0],
-                            'gene_ref': list2dict(gene_refs)
+                            'gene_name': gene_name,
                         })
-
+            # print(markers)
             record['markers'] = markers
 
         if 'reference' in record:
@@ -100,8 +90,8 @@ def load_kegg_data():
             record['xref'] = list2dict(xrefs)
             # print(xrefs)
 
-        one_doc = {k: v for k, v in record.items() if k is not None}
-        # print(records)
+        one_doc = {str(k): v for k, v in record.items() if k is not None}
+        print(one_doc)
         d.append(one_doc)
 
     return d
@@ -119,16 +109,13 @@ def parse(mongo_collection=None, drop=True):
     print("------------kegg data parsing--------------")
     kegg_disease = load_kegg_data()
     print("load kegg success")
-    # db.insert_many(kegg_disease)
-    for x in kegg_disease:
-        print(x)
-        db.insert_one(x)
+    db.insert_many(kegg_disease)
     print("insert kegg success")
     print("------------kegg data parsed success--------------")
 
 
 if __name__ == '__main__':
     # parse()
-    client = MongoClient('mongodb://kayzhao:zkj1234@192.168.1.100:27017/src_disease')
-    parse(client.src_disease.kegg)
-    # load_kegg_data()
+    # client = MongoClient('mongodb://kayzhao:zkj1234@192.168.1.100:27017/src_disease')
+    # parse(client.src_disease.kegg)
+    load_kegg_data()
