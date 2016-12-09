@@ -7,6 +7,7 @@ from databuild.kegg import *
 from utils.common import list2dict
 import bson
 
+
 def load_kegg_data():
     # ID	Name	Description	Category	Gene	Drug	Marker	Reference	Other DBs
     col_names = ['_id', 'name', 'description', 'category', 'genes', 'drugs', 'markers', 'reference', 'xref']
@@ -16,10 +17,11 @@ def load_kegg_data():
     id_replace = {"UMLS": "UMLS_CUI",
                   "ICD-10": "ICD10CM",
                   "MeSH": "MESH"}
-    df['_id'] = df['_id'].apply(lambda x: "KEGG:" + x)
+    # df['_id'] = df['_id'].apply(lambda x: "KEGG:" + x)
     for record in df.apply(lambda x: x.dropna().to_dict(), axis=1):
-        # if '_id' in record:
-        # record['_id'] = "KEGG:" + record["_id"]
+        if '_id' in record:
+            record['_id'] = "KEGG:" + record["_id"]
+
         if 'drugs' in record:
             drugs = []
             for x in re.split(",| ", record['drugs']):
@@ -98,9 +100,9 @@ def load_kegg_data():
             record['xref'] = list2dict(xrefs)
             # print(xrefs)
 
-        records = {k: v for k, v in record.items()}
+        one_doc = {k: v for k, v in record.items() if k is not None}
         # print(records)
-        d.append(records)
+        d.append(one_doc)
 
     return d
 
@@ -117,7 +119,10 @@ def parse(mongo_collection=None, drop=True):
     print("------------kegg data parsing--------------")
     kegg_disease = load_kegg_data()
     print("load kegg success")
-    db.insert_many(kegg_disease)
+    # db.insert_many(kegg_disease)
+    for x in kegg_disease:
+        print(x)
+        db.insert_one(x)
     print("insert kegg success")
     print("------------kegg data parsed success--------------")
 

@@ -93,6 +93,8 @@ def build_did_graph():
     create the id xref graph
     :return:id graph
     '''
+
+    id_except_pre = ["URL", "HTTP", "HTTPS", "DOI", "WIKI", "GAID"]
     g = nx.Graph()
     for db_name in db_names:
         db = get_src_conn()[DATA_SRC_DATABASE][db_name]
@@ -102,7 +104,8 @@ def build_did_graph():
             # print("%s \t %d" % (db_name, docs.count()))
             for doc in docs:
                 for xref in dict2list(doc['xref']):
-                    g.add_edge(doc['_id'].upper(), xref.upper())
+                    if xref.split(":", 1)[0] not in id_except_pre:
+                        g.add_edge(doc['_id'].upper(), xref.upper())
     return g
 
 
@@ -126,6 +129,23 @@ def num_dtype_ids_in_sg(g, cutoff=2, dtype="DOID"):
     d = dict(d)
 
     return {k: Counter(v) for k, v in d.items()}
+
+
+def get_connected_subgraph(g):
+    '''
+    get the connected component sub graphs
+    :param g:
+    :return:list of sub graphs
+    '''
+    if g is None:
+        return []
+    print(nx.number_connected_components(g))
+    graphs = list(nx.connected_component_subgraphs(g))
+    d = []
+    for sub in graphs:
+        d.append(len(sub.nodes()))
+
+    return [x for x in graphs], Counter(d)
 
 
 def id_mapping_test(dtype="DOID"):
@@ -172,11 +192,14 @@ if __name__ == "__main__":
     # id_mapping_test(dtype="DOID")
 
     g = build_did_graph()
-
-    # nx.write_edgelist(g, "C:/Users/Administrator/Desktop/id_xrefs.txt")
+    graphs, counts = get_connected_subgraph(g)
+    for k, v in sorted(counts.items()):
+        print("%d\t%d" % (k, v))
+    # nx.write_edgelist(g, "C:/Users/Administrator/Desktop/id_xrefs/id_xrefs.txt")
     # nx.write_adjlist(g, "C:/Users/Administrator/Desktop/ids.txt")
 
-    ID = "MESH:D010211"
+    ID = "MESH:D005067"
+    # ID = "MESH:D010211"
     for i in range(1, 10, 1):
         ids = get_equiv_dtype_id(g, ID, i, dtype="DOID")
         print("%d \t %s" % (i, len(ids)))
