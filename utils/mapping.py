@@ -83,7 +83,11 @@ def get_equiv_dtype_id(g, did, cutoff=2, dtype="DOID"):
         return [did]
     if did not in g:
         return []
-    equiv = set(nx.single_source_shortest_path_length(g, did, cutoff=cutoff).keys())
+    d_path = nx.single_source_shortest_path(g, did, cutoff=cutoff)
+    d_path_length = nx.single_source_shortest_path_length(g, did, cutoff=cutoff)
+    # for k, v in d_path.items():
+    # print(k, v, d_path_length[k])
+    equiv = set(d_path_length.keys())
     return [x for x in equiv if x.startswith(dtype)]
 
 
@@ -188,26 +192,32 @@ if __name__ == "__main__":
     g = build_did_graph()
 
     '''
+    the connected sub graph test
+    '''
+    # get_connected_subgraph(g)
+
+    '''
     export the graph data
     '''
     # nx.write_edgelist(g, "C:/Users/Administrator/Desktop/id_xrefs/id_xrefs.txt")
-    # nx.write_adjlist(g, "C:/Users/Administrator/Desktop/ids.txt")
+    # nx.write_adjlist(g, "C:/Users/Administrator/Desktop/id_xrefs/ids.txt")
 
     '''
     disease type id mapping test
     '''
-    # id_mapping_test(dtype="DOID")
-    id_mapping_test("UMLS_CUI")
+    # id_mapping_test("DOID")
+    # id_mapping_test("UMLS_CUI")
+
     '''
     single id test
     '''
     # ID = "MESH:D005067"
     # ID = "MESH:D010211"
     # ID = "MESH:D019867"
-    # ID = "MESH:D008219"
-    # for i in range(1, 11, 1):
-    # ids = get_equiv_dtype_id(g, ID, i, dtype="DOID")
-    # print("%d \t %s" % (i, len(ids)))
-    #     print(ids)
+    ID = "MESH:D008219"
+    for i in range(1, 11, 1):
+        ids = get_equiv_dtype_id(g, ID, i, dtype="DOID")
+        print("%d \t %s" % (i, len(ids)))
+        # print(ids)
 
     print("success")
