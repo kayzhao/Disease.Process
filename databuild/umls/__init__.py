@@ -18,4 +18,5 @@ DATA_DIR_UMLS = os.path.join(DATA_DIR, "umls")
 
 diseases_url = "https://www.nlm.nih.gov/research/umls/licensedcontent/umlsknowledgesources.html"
 
+umls_mrrel_path = os.path.join(DATA_DIR_UMLS, "MRREL.RRF")
 umls_xref_path = os.path.join(DATA_DIR_UMLS, "MRCONSO.RRF")

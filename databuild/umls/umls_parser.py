@@ -1,45 +1,97 @@
 __author__ = 'kayzhao'
 
-import re
 import pandas as pd
 from pymongo import MongoClient
 from databuild.umls import *
-from utils.common import list2dict
+from tqdm import tqdm
+import re
 
 
-def load_kegg_data():
-    col_names = ['_id', 'name', 'description', 'category', 'drugs', 'xref']
-    df = pd.read_csv(umls_xref_path, sep="\t", comment='#', names=col_names)
-    # print(len(df.to_records()))
-    # change to list of dict
-    d = []
-    id_replace = {"UMLS": "UMLS_CUI",
-                  "ICD-10": "ICD10CM",
-                  "MeSH": "MESH"}
-    for record in df.apply(lambda x: x.dropna().to_dict(), axis=1):
-        if '_id' in record:
-            record['_id'] = "KEGG:" + record["_id"]
-        if 'drugs' in record:
-            drugs = []
-            for x in re.split(",| ", record['drugs']):
-                if len(x) > 0:
-                    drugs.append(x)
-            record['drugs'] = drugs
-        if 'xref' in record:
-            xrefs = []
-            for x in record['xref'].split(";"):
-                source = x.split(":", 1)[0].upper()
-                source = id_replace.get(source, source)
-                ids = x[x.find(":") + 1:].strip().replace(u'\xa0', u' ')
-                for id in re.split(",| ", ids):
-                    if len(id) > 0:
-                        xrefs.append(source + ":" + id)
-            record['xref'] = list2dict(xrefs)
-            # print(xrefs)
-        records = {k: v for k, v in record.items()}
-        print(records)
-        d.append(records)
-    return d
+def load_mrrel_rrf(db):
+    '''
+    column name from:
+    https://www.ncbi.nlm.nih.gov/books/NBK9685/table/ch03.T.related_concepts_file_mrrel_rrf/?report=objectonly
+    load the UMLS_CUI MRREL data(total records = 70587165)
+    :return:
+    '''
+    col_names = ['CUI1', 'AUI1', 'STYPE1',
+                 'REL',  # Relationship of second concept or atom to first concept or atom
+                 'CUI2', 'AUI2', 'STYPE2',
+                 'RELA',
+                 'RUI', 'SRUI', 'SAB', 'SL', 'RG', 'DIR', 'SUPPRESS', 'CVF', 'NONE']
+
+    columns_rename = {
+        'CUI1': "_id",
+        'AUI1': "aui_1",
+        'STYPE1': "stype_1",
+        'REL': 'relationship',
+        'CUI2': "umls_cui",
+        'AUI2': "aui_2",
+        'STYPE2': "stype_2",
+        'RELA': "additional_label",  # additional_relationship_label
+        'RUI': "rui",
+        'SRUI': "source_id",
+        'SAB': "source_name",
+        'SL': "source_relationship",  # source_relationship
+        'RG': "relationship_group",
+        'DIR': "source_direct",  # source_directionality_flag
+        'SUPPRESS': "suppress",  # suppressible_flag
+        'CVF': "cvf"  #content_view_flag
+    }
+    chunksize = 100000
+
+    f = open(umls_mrrel_path, encoding='utf-8')
+    total_len = 0
+    for df in tqdm(
+            pd.read_csv(f, sep='\\|', engine='python', comment="#", header=None, chunksize=chunksize,
+                        names=col_names), total=49867785 / chunksize):
+        '''
+        records statics
+        '''
+        total_len += len(df.to_records())
+        print(len(df.to_records()), total_len)
+        del df['NONE']
+        # print(df.head(3))
+
+        columns_keep = ['CUI1', 'AUI1', 'STYPE1', 'REL', 'CUI2', 'AUI2', 'STYPE2',
+                        'RELA', 'RUI', 'SRUI', 'SAB', 'SL', 'RG']
+        df = df.filter(items=columns_keep)
+        id_replace = {
+            "UMLS": "UMLS_CUI",
+            "ICD-9": "ICD9CM",
+            "ICD9": "ICD9CM",
+            "ICD10": "ICD10CM",
+            "ICD-10": "ICD10CM",
+            "MeSH": "MESH",
+            "MSH": "MESH",
+            "ORDO": "ORPHANET",
+            "SNOMEDCT_US": "SNOMEDCT",
+            "SNOMEDCT_US_2016_03_01": "SNOMEDCT",
+            "SNOMEDCT_US_2015_03_01": "SNOMEDCT",
+            "HPO": "HP"
+        }
+        # update the data
+        for cui, subdf in df.groupby("CUI1"):
+            # print(subdf.head(3))
+            subdf = subdf.rename(columns=columns_rename)
+            subdf['umls_cui'] = subdf['umls_cui'].apply(lambda x: "UMLS_CUI:" + x)
+            subdf['source_name'] = subdf['source_name'].apply(lambda x: id_replace.get(x, x))
+            sub = subdf.apply(lambda x: x.dropna(), axis=1).to_dict(orient="records")
+            sub = [{k: v for k, v in s.items() if v == v} for s in sub]
+            for record in sub:
+                if 'relationship_group' in record:
+                    record['relationship_group'] = int(record['relationship_group'])
+            if len(sub) > 0:
+                db.update_one({'_id': "UMLS_CUI:" + cui},
+                              {'$set': {"relationships": sub}},
+                              upsert=True)
+
+
+def load_mrconso_rrf():
+    '''
+    load the UMLS_CUI MRREL data
+    :return:
+    '''
 
 
 def parse(mongo_collection=None, drop=True):
@@ -51,15 +103,19 @@ def parse(mongo_collection=None, drop=True):
     if drop:
         db.drop()
 
-    print("------------kegg data parsing--------------")
-    kegg_disease = load_kegg_data()
-    print("load kegg success")
-    db.insert_many(kegg_disease)
-    print("insert kegg success")
-    print("------------kegg data parsed success--------------")
+    print("------------umls data parsing--------------")
+
+    print("------------umls mrconso data --------------")
+    # load_mrconso_rrf()
+
+    print("------------umls mrrel data --------------")
+    load_mrrel_rrf(db)
+
+    print("------------umls data parsed success--------------")
 
 
 if __name__ == '__main__':
     # parse()
-    client = MongoClient('mongodb://kayzhao:zkj1234@192.168.1.119:27017/src_disease')
-    parse(client.src_disease.kegg)
+    # load_mrrel_rrf()
+    client = MongoClient('mongodb://kayzhao:zkj1234@192.168.1.110:27017/src_disease')
+    parse(client[DATA_SRC_DATABASE]['umls'])
