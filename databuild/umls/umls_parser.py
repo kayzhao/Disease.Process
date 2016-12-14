@@ -75,6 +75,7 @@ def load_mrrel_rrf(db):
         df = df.filter(items=columns_keep)
         # update or insert the data
         for cui, subdf in df.groupby("CUI1"):
+            # format the sub-df
             subdf = subdf.rename(columns=columns_rename)
             subdf['umls_cui'] = subdf['umls_cui'].apply(lambda x: "UMLS_CUI:" + x)
             subdf['source_abbreviation'] = subdf['source_abbreviation'].apply(lambda x: id_replace.get(x, x))
@@ -82,6 +83,7 @@ def load_mrrel_rrf(db):
             # delete the _id field
             del subdf['_id']
 
+            # get rid of nulls
             sub = subdf.apply(lambda x: x.dropna(), axis=1).to_dict(orient="records")
             sub = [{k: v for k, v in s.items() if v == v} for s in sub]
 
@@ -141,15 +143,16 @@ def load_mrconso_rrf(db):
 
         # update or insert the data
         for cui, subdf in df.groupby("CUI"):
-
+            # format the sub-df
             subdf = subdf.rename(columns=columns_rename)
             subdf['_id'] = subdf['_id'].apply(lambda x: "UMLS_CUI:" + x)
             subdf['source_abbreviation'] = subdf['source_abbreviation'].apply(lambda x: id_replace.get(x, x))
-            # subdf['cvf'] = subdf['cvf'].dropna().astype(int)
             subdf['cvf'] = subdf['cvf'].dropna().map('{:.0f}'.format)
+
             # delete the _id field
             del subdf['_id']
 
+            # get rid of nulls
             sub = subdf.apply(lambda x: x.dropna(), axis=1).to_dict(orient="records")
             sub = [{k: v for k, v in s.items() if v == v} for s in sub]
 
