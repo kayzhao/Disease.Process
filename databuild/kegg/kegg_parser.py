@@ -91,7 +91,7 @@ def load_kegg_data():
             # print(xrefs)
 
         one_doc = {str(k): v for k, v in record.items() if k is not None}
-        print(one_doc)
+        # print(one_doc)
         d.append(one_doc)
 
     return d
@@ -112,10 +112,3 @@ def parse(mongo_collection=None, drop=True):
     db.insert_many(kegg_disease)
     print("insert kegg success")
     print("------------kegg data parsed success--------------")
-
-
-if __name__ == '__main__':
-    # parse()
-    # client = MongoClient('mongodb://kayzhao:zkj1234@192.168.1.100:27017/src_disease')
-    # parse(client.src_disease.kegg)
-    load_kegg_data()

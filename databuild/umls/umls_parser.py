@@ -192,7 +192,7 @@ def load_mrconso_rrf(db):
                     }, upsert=True)
 
 
-def load_mrrel_rrf():
+def load_mrrel_rrf(db):
     '''
     column name from:
     https://www.ncbi.nlm.nih.gov/books/NBK9685/table/ch03.T.related_concepts_file_mrrel_rrf/?report=objectonly
@@ -273,18 +273,18 @@ def load_mrrel_rrf():
                 print(ruis)
                 print(relationships)
                 print(additional_labels)
-                # if len(additional_labels) > 0:
-                # db.update_one(
-                #         {'_id': "UMLS_CUI:" + cui},
-                #         {'$set': {
-                #             "ruis": ruis,
-                #             "relationships": relationships,
-                #             "additional_labels": additional_labels
-                #         }}, upsert=True)
-                # else:
-                #     db.update_one(
-                #         {'_id': "UMLS_CUI:" + cui},
-                #         {'$set': {"ruis": ruis, "relationships": relationships}}, upsert=True)
+                if len(additional_labels) > 0:
+                    db.update_one(
+                        {'_id': "UMLS_CUI:" + cui},
+                        {'$set': {
+                            "ruis": ruis,
+                            "relationships": relationships,
+                            "additional_labels": additional_labels
+                        }}, upsert=True)
+                else:
+                    db.update_one(
+                        {'_id': "UMLS_CUI:" + cui},
+                        {'$set': {"ruis": ruis, "relationships": relationships}}, upsert=True)
 
 
 def parse(mongo_collection=None, drop=True):
@@ -302,14 +302,6 @@ def parse(mongo_collection=None, drop=True):
     load_mrconso_rrf(db)
 
     print("------------umls mrrel data --------------")
-    # load_mrrel_rrf(db)
+    load_mrrel_rrf(db)
 
     print("------------umls data parsed success--------------")
-
-
-if __name__ == '__main__':
-    # parse()
-    load_mrrel_rrf()
-    # load_mrconso_rrf()
-    # client = MongoClient('mongodb://kayzhao:zkj1234@192.168.1.110:27017/src_disease')
-    # parse(mongo_collection=client[DATA_SRC_DATABASE]['umls'], drop=False)

@@ -154,8 +154,3 @@ def parse(mongo_collection=None, drop=True):
     db.insert_many(list(d.values()))
     print("insert into mongodb success")
     print("------------efo data parsed success--------------")
-
-
-if __name__ == '__main__':
-    client = get_src_conn()
-    parse(client.src_disease.efo)

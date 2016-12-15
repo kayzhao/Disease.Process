@@ -32,9 +32,3 @@ def parse(mongo_collection=None, drop=True):
     db.insert_many(d)
     print("insert pharmacotherapydb data success")
     print("------------pharmacotherapydb data parsed success--------------")
-
-
-if __name__ == '__main__':
-    client = MongoClient('mongodb://kayzhao:zkj1234@192.168.1.119:27017/src_disease')
-    # client = MongoClient('mongodb://zkj1234:zkj1234@192.168.1.113:27017/src_disease')
-    parse(client[DATA_SRC_DATABASE][field])

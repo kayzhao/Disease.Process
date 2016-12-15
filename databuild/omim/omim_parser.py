@@ -147,14 +147,3 @@ def parse(mongo_collection=None, drop=True):
     # for x in d.values():
     # db.insert_one(x)
     print("------------omim data parsed success--------------")
-
-
-if __name__ == "__main__":
-    # parse_mimTitles()
-    # parse_geneMap2()
-    # client = MongoClient('mongodb://zkj1234:zkj1234@192.168.1.113:27017/disease')
-    # parse(client.disease.omim)
-    # parse()
-    # parse_mim2gene()
-    client = MongoClient('mongodb://kayzhao:zkj1234@192.168.1.119:27017/src_disease')
-    parse(client.src_disease.omim)

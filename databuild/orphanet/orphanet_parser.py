@@ -319,9 +319,3 @@ def parse(mongo_collection=None, drop=True):
         db.update_one({'_id': dd['_id']}, {'$set': dd}, upsert=True)
 
     print("------------orphanet data parsed success--------------")
-
-
-if __name__ == '__main__':
-    client = MongoClient('mongodb://kayzhao:zkj1234@192.168.1.119:27017/src_disease')
-    # client = MongoClient('mongodb://zkj1234:zkj1234@192.168.1.113:27017/src_disease')
-    parse(client.src_disease.orphanet)
