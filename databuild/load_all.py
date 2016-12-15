@@ -67,7 +67,7 @@ def merge(mongo_collection=None, drop=True):
     if drop:
         disease.drop()
 
-    g = build_did_graph()
+    g = build_id_graph()
 
     # make initial primary d with all DOID docs
     db = MongoClient().disease.do
@@ -81,7 +81,7 @@ def merge(mongo_collection=None, drop=True):
         if db.count() == 0:
             print("Warning: {} is empty".format(db))
         for doc in db.find():
-            doids = get_equiv_dtype_id(g, doc['_id'])
+            doids = get_equiv_doid(g, doc['_id'])
             for doid in doids:
                 disease.update_one({'_id': doid}, {'$push': {db_name: doc}}, upsert=True)
 
