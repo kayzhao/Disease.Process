@@ -25,7 +25,7 @@ db_names = [
     'ctd',
     'ndfrt',
     'orphanet',
-    'pharmacotherapydb'
+    'pydb'
 ]
 
 LOGGER_NAME = "disease.data"
@@ -67,7 +67,7 @@ DATA_TARGET_MASTER_COLLECTION = 'db_master'
 DATA_WWW_ROOT_URL = "http://localhost:8000"
 
 DATA_SERVER_USERNAME = 'kayzhao'
-DATA_SERVER_PASSWORD = 'zkj1234'
+DATA_SERVER_PASSWORD = 'kayzhao'
 
 LOG_FOLDER = 'logs'
 

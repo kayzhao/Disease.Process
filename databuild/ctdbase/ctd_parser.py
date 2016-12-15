@@ -176,9 +176,3 @@ def parse(db=None, drop=True):
                 parse_df(mongo_collection, df, relationship)
 
     print("------------ctdbase data parsed success--------------")
-
-
-if __name__ == '__main__':
-    client = MongoClient('mongodb://kayzhao:zkj1234@192.168.1.119:27017/src_disease')
-    parse(client.src_disease)
-    # parse(client.src_disease)

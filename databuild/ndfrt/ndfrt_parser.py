@@ -106,8 +106,3 @@ def parse(mongo_collection=None, drop=True):
 
     db.insert_many(list(diseases.values()))
     print("------------ndfrt data parsed success--------------")
-
-
-if __name__ == '__main__':
-    client = MongoClient('mongodb://kayzhao:zkj1234@192.168.1.119:27017/src_disease')
-    parse(client.src_disease.ndfrt)
