@@ -1,5 +1,5 @@
 from pymongo import MongoClient
-from databuild.pharmacotherapydb import file_path, __METADATA__
+from databuild.pydb import file_path, __METADATA__
 from config import DATA_SRC_DATABASE
 import pandas as pd
 

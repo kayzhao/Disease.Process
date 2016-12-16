@@ -6,7 +6,6 @@ from databuild.umls import *
 from tqdm import tqdm
 from utils.common import list2dict
 
-
 # normalize the id type
 id_replace = {
     "CCS_10": "CCS10",
@@ -26,6 +25,7 @@ id_replace = {
     # MSH
     "MSH": "MESH",
 }
+
 
 def load_mrconso_rrf(db):
     '''
@@ -60,8 +60,8 @@ def load_mrconso_rrf(db):
     chunksize = 100000
 
     f = open(umls_xref_path, "r", encoding='utf-16le', errors='ignore')
-    # wr = open("C:/Users/Administrator/Desktop/ids.txt", "w", encoding='utf-8', )
     total_len = 0
+
     for df in tqdm(pd.read_csv(f, sep='\\|', engine='python', comment="#", header=None, chunksize=chunksize,
                                names=col_names), total=49867785 / chunksize):
         '''
@@ -79,6 +79,8 @@ def load_mrconso_rrf(db):
             subdf['_id'] = subdf['_id'].apply(lambda x: "UMLS_CUI:" + x)
             subdf['source_abbreviation'] = subdf['source_abbreviation'].apply(lambda x: id_replace.get(x, x))
             subdf['cvf'] = subdf['cvf'].dropna().map('{:.0f}'.format)
+            subdf['source_aui'] = subdf['source_aui'].dropna().map('{:.0f}'.format)
+            subdf['source_restriction_level'] = subdf['source_restriction_level'].dropna().map('{:.0f}'.format)
 
             # delete the _id field
             del subdf['_id']
@@ -100,22 +102,20 @@ def load_mrconso_rrf(db):
                     xrefs.append(record['source_abbreviation'] + ":" + record['source_identifier'])
                     del record['source_abbreviation']
                     del record['source_identifier']
+
             # remove duplicates
             synonyms = list(set(synonyms))
             xrefs = list(set(xrefs))
-            # print(xrefs)
+
             if len(sub) > 0:
-                # print(sub)
-                # wr.write(cui + "\t")
-                # wr.write(xrefs + "\n")
                 db.update_one(
                     {'_id': "UMLS_CUI:" + cui},
                     {'$set':
-                         {
-                             "concepts": sub,
-                             "synonym": synonyms,
-                             "xref": list2dict(xrefs)
-                         }
+                        {
+                            "concepts": sub,
+                            "synonym": synonyms,
+                            "xref": list2dict(xrefs)
+                        }
                     }, upsert=True)
 
 
@@ -179,40 +179,29 @@ def load_mrrel_rrf(db):
 
             # get the relationships,relationships ids or additional ship labels
             relationships = []
-            additional_labels = []
             ruis = []
             for record in sub:
                 ruis.append(record['rui'])
-                if 'relationship' in record:
+                if 'relationship' in record and 'additional_label' in record:
                     relationships.append({
                         'umls_cui': record['umls_cui'],
-                        'relationship': record['relationship']
+                        'relationship': record['relationship'],
+                        'additional_label': record['additional_label']
                     })
-                if 'additional_label' in record:
-                    additional_labels.append(record)
+                if 'relationship' in record and 'additional_label' not in record:
+                    relationships.append({
+                        'umls_cui': record['umls_cui'],
+                        'relationship': record['relationship'],
+                    })
 
             # remove duplicates
             ruis = list(set(ruis))
             relationships = [dict(t) for t in set([tuple(d.items()) for d in relationships])]
-            additional_labels = [dict(t) for t in set([tuple(d.items()) for d in additional_labels])]
 
-            if len(sub) > 0:
-                print(ruis)
-                print(relationships)
-                print(additional_labels)
-                if len(additional_labels) > 0:
-                    db.update_one(
-                        {'_id': "UMLS_CUI:" + cui},
-                        {'$set': {
-                            "ruis": ruis,
-                            "relationships": relationships,
-                            "additional_labels": additional_labels
-                        }}, upsert=True)
-                else:
-                    db.update_one(
-                        {'_id': "UMLS_CUI:" + cui},
-                        {'$set': {"ruis": ruis, "relationships": relationships}}, upsert=True)
-
+            if len(relationships) > 0:
+                db.update_one(
+                    {'_id': "UMLS_CUI:" + cui},
+                    {'$set': {"ruis": ruis, "relationships": relationships}}, upsert=True)
 
 def parse(mongo_collection=None, drop=True):
     if mongo_collection:
@@ -226,7 +215,7 @@ def parse(mongo_collection=None, drop=True):
     print("------------umls data parsing--------------")
 
     print("------------umls mrconso data --------------")
-    load_mrconso_rrf(db)
+    # load_mrconso_rrf(db)
 
     print("------------umls mrrel data --------------")
     load_mrrel_rrf(db)
