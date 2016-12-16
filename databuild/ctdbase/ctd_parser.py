@@ -135,17 +135,25 @@ def process_genes(db, mongo_collection, f, relationship:str):
             sub = subdf[columns_keep].to_dict(orient="records")
             # get rid of nulls
             sub = [{k: v for k, v in s.items() if v == v} for s in sub]
-            # dump 2 gridfs while the BSON document is to large
-            file_name = diseaseID + '_ctd_' + relationship + '.obj'
-            dump2gridfs(sub, file_name, db)
-            mongo_collection.update_one(
-                {'_id': diseaseID},
-                {'$push': {
-                    relationship: {
-                        'filename': file_name,
-                        'mode': 'gridfs'
-                    }
-                }}, upsert=True)
+            if len(sub) > 10000:
+                # dump 2 gridfs while the BSON document is to large
+                file_name = diseaseID + '_ctd_' + relationship + '.obj'
+                dump2gridfs(sub, file_name, db)
+                mongo_collection.update_one(
+                    {'_id': diseaseID},
+                    {'$push': {
+                        relationship: {
+                            'filename': file_name,
+                            'mode': 'gridfs'
+                        }
+                    }}, upsert=True)
+            else:
+                # document after update is larger than 16777216
+                db.update_one(
+                    {'_id': diseaseID},
+                    {'$push': {
+                        relationship: {'$each': sub},
+                    }}, upsert=True)
 
 
 def parse(db=None, drop=True):
