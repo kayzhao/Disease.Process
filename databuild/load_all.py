@@ -41,8 +41,8 @@ def parse_all():
     # orphanet_parser.parse(client.src_disease.orphanet, False)
 
     # large data
-    umls_parser.parse(client.src_disease.umls, False)
-    # ctd_parser.parse(client.src_disease.ctd, False)
+    # umls_parser.parse(client.src_disease.umls, False)
+    ctd_parser.parse(client.src_disease, client.src_disease.ctd, False)
 
 
 def merge_one(db_name):

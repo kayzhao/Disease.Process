@@ -3,8 +3,8 @@ import pandas as pd
 from pymongo import MongoClient
 from tqdm import tqdm
 from databuild.ctdbase import *
-from utils.common import dump2gridfs, loadobj
-
+from utils.common import dump2gridfs, loadobj, timesofar
+import time
 columns_rename = {'GOID': 'go',
                   'InferenceGeneSymbols': 'inference_gene_symbols',
                   'PathwayID': 'pathway',
@@ -109,7 +109,7 @@ def process_chemicals(db, f, relationship: str):
             db.update_one({'_id': diseaseID}, {'$set': {relationship.lower(): sub}}, upsert=True)
 
 
-def process_genes(db, mongo_collection, f, relationship:str):
+def process_genes(db, mongo_collection, f, relationship: str):
     """
     # for the genes file, which is enormous, we need to do something different
     # basically same as others, but in chunks
@@ -135,31 +135,30 @@ def process_genes(db, mongo_collection, f, relationship:str):
             sub = subdf[columns_keep].to_dict(orient="records")
             # get rid of nulls
             sub = [{k: v for k, v in s.items() if v == v} for s in sub]
-            if len(sub) > 10000:
-                # dump 2 gridfs while the BSON document is to large
-                file_name = diseaseID + '_ctd_' + relationship + '.obj'
-                dump2gridfs(sub, file_name, db)
-                mongo_collection.update_one(
-                    {'_id': diseaseID},
-                    {'$push': {
-                        relationship: {
-                            'filename': file_name,
-                            'mode': 'gridfs'
-                        }
-                    }}, upsert=True)
-            else:
-                # document after update is larger than 16777216
-                db.update_one(
-                    {'_id': diseaseID},
-                    {'$push': {
-                        relationship: {'$each': sub},
-                    }}, upsert=True)
+            # dump 2 gridfs while the BSON document is to large
+            file_name = diseaseID + '_genes_' + str(time.time()) + '.pyobj'
+            dump2gridfs(sub, file_name, db)
+            mongo_collection.update_one(
+                {'_id': diseaseID},
+                {'$push': {
+                    relationship: {
+                        'filename': file_name,
+                        'mode': 'gridfs'
+                    }
+                }}, upsert=True)
+
+            # document after update is larger than 16777216
+            #     mongo_collection.update_one(
+            #         {'_id': diseaseID},
+            #         {'$push': {
+            #             relationship: {'$each': sub},
+            #         }}, upsert=True)
 
 
-def parse(db=None, drop=True):
-    if db:
+def parse(db=None, mongo_collection=None, drop=True):
+    if db and mongo_collection:
         db = db
-        mongo_collection = db.ctd
+        mongo_collection = mongo_collection
     else:
         client = MongoClient()
         db = client.disease
@@ -175,12 +174,12 @@ def parse(db=None, drop=True):
                 print("parsing the  " + relationship + "data")
                 # use gridfs , the param db must be database not database.collection
                 process_genes(db, mongo_collection, f, relationship)
-            elif relationship == "chemicals":
-                print("parsing the  " + relationship + "data")
-                process_chemicals(mongo_collection, f, relationship)
-            else:
-                print("parsing the  " + relationship + "data")
-                df = parse_csv_to_df(f)
-                parse_df(mongo_collection, df, relationship)
+                # elif relationship == "chemicals":
+                #     print("parsing the  " + relationship + "data")
+                #     process_chemicals(mongo_collection, f, relationship)
+                # else:
+                #     print("parsing the  " + relationship + "data")
+                #     df = parse_csv_to_df(f)
+                #     parse_df(mongo_collection, df, relationship)
 
     print("------------ctdbase data parsed success--------------")
