@@ -4,7 +4,7 @@ import pandas as pd
 from pymongo import MongoClient
 from databuild.umls import *
 from tqdm import tqdm
-from utils.common import list2dict
+from utils.common import list2dict, dict2list
 
 # normalize the id type
 id_replace = {
@@ -111,11 +111,11 @@ def load_mrconso_rrf(db):
                 db.update_one(
                     {'_id': "UMLS_CUI:" + cui},
                     {'$set':
-                        {
-                            "concepts": sub,
-                            "synonym": synonyms,
-                            "xref": list2dict(xrefs)
-                        }
+                         {
+                             "concepts": sub,
+                             "synonym": synonyms,
+                             "xref": list2dict(xrefs)
+                         }
                     }, upsert=True)
 
 
@@ -202,6 +202,34 @@ def load_mrrel_rrf(db):
                 db.update_one(
                     {'_id': "UMLS_CUI:" + cui},
                     {'$set': {"ruis": ruis, "relationships": relationships}}, upsert=True)
+
+
+def get_mrconso_xref_nums(db):
+    '''
+
+    :param db:
+    :return:
+    all_data:dict , all umls data
+    1.{umls_cui:source_ids}
+    2.{'all_xref_ids':list}
+    '''
+    docs = db.find({'xref': {'$exists': True}}, {'xref': 1})
+    all_data = dict()
+
+    all_ids = set()
+    all_umls_xrefs = dict()
+    for doc in docs:
+        one_xref = set(dict2list(doc['xref']))
+        all_ids.update(one_xref)
+        all_umls_xrefs[doc['_id']] = list(one_xref)
+        print(len(all_ids))
+
+    # xref ids data
+    all_data['all_xref_ids'] = all_ids
+    all_data['all_umls_xrefs'] = all_umls_xrefs
+
+    return all_data
+
 
 def parse(mongo_collection=None, drop=True):
     if mongo_collection:

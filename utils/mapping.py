@@ -7,6 +7,7 @@ from utils.mongo import get_src_conn
 from collections import defaultdict
 from utils.common import dict2list
 from config import DATA_SRC_DATABASE
+from pymongo import MongoClient
 
 
 def get_ids_info():
@@ -178,6 +179,66 @@ def id_mapping_test(dtype="DO"):
             print("%s\t%d\t%d" % (k, num_nomapping, num_mapping))
 
 
+def id_mapping(dtype="DO"):
+    g = build_did_graph()
+    mapping_cuttof = 700
+    print("build id graph success")
+    print("cuttoff is 1")
+    for k, v in num_dtype_ids_in_sg(g, 1, dtype=dtype).items():
+        num_nomapping = 0
+        num_mapping = 0
+        for n in v:
+            if n > 0:
+                num_mapping += v[n]
+            else:
+                num_nomapping = v[n]
+        if num_mapping > mapping_cuttof or num_nomapping > mapping_cuttof:
+            print("%s\t%d\t%d" % (k, num_nomapping, num_mapping))
+
+    print("cuttoff is 2")
+    for k, v in num_dtype_ids_in_sg(g, 2, dtype=dtype).items():
+        num_nomapping = 0
+        num_mapping = 0
+        for n in v:
+            if n > 0:
+                num_mapping += v[n]
+            else:
+                num_nomapping = v[n]
+        if num_mapping > mapping_cuttof or num_nomapping > mapping_cuttof:
+            print("%s\t%d\t%d" % (k, num_nomapping, num_mapping))
+
+    print("cuttoff is 3")
+    for k, v in num_dtype_ids_in_sg(g, 3, dtype=dtype).items():
+        num_nomapping = 0
+        num_mapping = 0
+        for n in v:
+            if n > 0:
+                num_mapping += v[n]
+            else:
+                num_nomapping = v[n]
+        if num_mapping > mapping_cuttof or num_nomapping > mapping_cuttof:
+            print("%s\t%d\t%d" % (k, num_nomapping, num_mapping))
+
+
+def get_umls_data():
+    '''
+    get the umls collection data
+    :return:
+        list of umls data
+    '''
+    from databuild.umls import umls_parser
+
+    client = MongoClient('mongodb://202.197.66.216:27017/src_disease')
+    all_data = umls_parser.get_mrconso_xref_nums(client.src_disease.umls)
+    all_ids = all_data['all_xref_ids']
+    f = open("D:/disease/umls/umls_xrefs.txt", 'w', encoding='utf-16le', errors='ignore')
+    for k, v in all_data['all_umls_xrefs'].items():
+        f.write(k + "\t" + ''.join([x + "|" for x in v if x is not None]) + "\n")
+    for k, v in Counter([x.split(":", 1)[0] for x in all_data['all_xref_ids']]).items():
+        print("%s \t %d" % (k, v))
+    return all_ids
+
+
 if __name__ == "__main__":
     '''
     get the data info
@@ -189,7 +250,7 @@ if __name__ == "__main__":
     '''
     build the disease id xref graph
     '''
-    g = build_did_graph()
+    # g = build_did_graph()
 
     '''
     the connected sub graph test
@@ -214,10 +275,11 @@ if __name__ == "__main__":
     # ID = "MESH:D005067"
     # ID = "MESH:D010211"
     # ID = "MESH:D019867"
-    ID = "MESH:D008219"
-    for i in range(1, 11, 1):
-        ids = get_equiv_dtype_id(g, ID, i, dtype="DOID")
-        print("%d \t %s" % (i, len(ids)))
-        # print(ids)
+    # ID = "MESH:D008219"
+    # for i in range(1, 11, 1):
+    # ids = get_equiv_dtype_id(g, ID, i, dtype="DOID")
+    # print("%d \t %s" % (i, len(ids)))
+    # print(ids)
 
+    get_umls_data()
     print("success")

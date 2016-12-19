@@ -174,12 +174,12 @@ def parse(db=None, mongo_collection=None, drop=True):
                 print("parsing the  " + relationship + "data")
                 # use gridfs , the param db must be database not database.collection
                 process_genes(db, mongo_collection, f, relationship)
-                # elif relationship == "chemicals":
-                #     print("parsing the  " + relationship + "data")
-                #     process_chemicals(mongo_collection, f, relationship)
-                # else:
-                #     print("parsing the  " + relationship + "data")
-                #     df = parse_csv_to_df(f)
-                #     parse_df(mongo_collection, df, relationship)
+            elif relationship == "chemicals":
+                print("parsing the  " + relationship + "data")
+                process_chemicals(mongo_collection, f, relationship)
+            else:
+                print("parsing the  " + relationship + "data")
+                df = parse_csv_to_df(f)
+                parse_df(mongo_collection, df, relationship)
 
     print("------------ctdbase data parsed success--------------")
