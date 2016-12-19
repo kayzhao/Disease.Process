@@ -51,7 +51,7 @@ JSONLD_CONTEXT_PATH = ''
 # Mydeisease HUB VARS  #
 # ################ #
 
-DATA_SRC_SERVER = '192.168.1.100'
+DATA_SRC_SERVER = '202.197.66.216'
 DATA_SRC_PORT = 27017
 DATA_SRC_DATABASE = 'src_disease'
 DATA_SRC_MASTER_COLLECTION = 'src_master'  # for metadata of each src collections
