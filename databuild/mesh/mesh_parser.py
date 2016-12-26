@@ -72,7 +72,7 @@ def load_mesh_desc():
                   'DC': "descriptor_class",
                   'UI': "_id",
                   'RECTYPE': "record_type",
-                  'synonyms': "synonyms"}  # added by me from PRINT ENTRY & ENTRY
+                  'synonyms': "synonym"}  # added by me from PRINT ENTRY & ENTRY
 
     # which attributes can have multiple values?
     # for k, l in groupby(mesh_desc, lambda x: x == "*NEWRECORD"):
@@ -89,7 +89,7 @@ def load_mesh_desc():
         record = list(gb_record[1])
         # for line in record:
         # print(line)
-        #     if "=" in line:
+        # if "=" in line:
         #         print(line)
         #         c_ = Counter(line.split("=", 1)[0].strip())
         # d = dict(c_)

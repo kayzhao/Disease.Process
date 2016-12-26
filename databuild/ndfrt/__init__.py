@@ -66,7 +66,7 @@ def get_mapping():
                         }
                     }
                 },
-                "synonyms": {
+                "synonym": {
                     "type": "string"
                 },
                 "name": {

@@ -10,7 +10,7 @@ class NDFRT_item:
         self.kind = kind
         self.roles = roles
         self.props = props
-        self.drug_used_for_treatment = []
+        self.drugs = []
 
     def __repr__(self):
         return "\n".join([self.name, self.code, self.kind, str(self.roles), str(self.props)])
@@ -31,14 +31,14 @@ class NDFRT_item:
     def format_disease(self):
         d = {'name': self.props['Display_Name'][0],
              '_id': 'UMLS_CUI:' + self.props['UMLS_CUI'][0],
-             'synonyms': self.props.get('Synonym', []),
+             'synonym': self.props.get('Synonym', []),
              'xref': {
                  'MESH': self.props.get('MeSH_DUI', []),
                  'NUI': self.props.get('NUI', []),
                  'RXNORM_CUI': self.props.get('RxNorm_CUI', []),
                  'SNOMEDCT': self.props.get('SNOMED_CID', []),
              },
-             'drugs_used_for_treatment': self.drug_used_for_treatment
+             'drugs': self.drugs
         }
         return d
 
@@ -87,7 +87,7 @@ def _parse():
     for drug in drugs.values():
         drug_treats = drug.roles.get('may_treat {NDFRT}', [])
         for dt in drug_treats:
-            diseases[dt].drug_used_for_treatment.append(drug.format_drug())
+            diseases[dt].drugs.append(drug.format_drug())
     return diseases
 
 

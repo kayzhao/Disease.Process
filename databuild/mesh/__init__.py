@@ -50,7 +50,7 @@ def get_mapping():
                 "last_updated": {
                     "type": "string"
                 },
-                "synonyms": {
+                "synonym": {
                     "type": "string"
                 },
                 "descriptor_class": {

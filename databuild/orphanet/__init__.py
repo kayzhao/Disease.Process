@@ -178,7 +178,7 @@ def get_mapping():
                 "alternative_term": {
                     "type": "string"
                 },
-                "synonyms": {
+                "synonym": {
                     "type": "string"
                 },
                 "_id": {

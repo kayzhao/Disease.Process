@@ -18,7 +18,7 @@ def parse_ordo():
                       "http://www.ebi.ac.uk/efo/reason_for_obsolescence": "reason_for_obsolescence",
                       "http://www.geneontology.org/formats/oboInOwl#hasDbXref": "xref",
                       "http://www.orpha.net/ORDO/Orphanet_#symbol": "symbol",
-                      "Synonyms": "synonyms",
+                      "Synonyms": "synonym",
                       "Obsolete": "obsolete",
                       "Class ID": "id",
                       "Preferred Label": "preferred_label",
@@ -74,14 +74,14 @@ def parse_xref(d):
                 reference = reference.replace("-", "").replace("*", "").replace("+", "")
             xref = source + ":" + reference
             mapping[mapping_relation].append(xref)
-            if mapping_relation in {'E', 'NTBT', 'BTNT'}:
+            if mapping_relation in {'E', 'NTBT', 'BTNT', "ND"}:
                 xrefs.append(xref)
         xrefs = list2dict(xrefs)
         synonyms = [x.text for x in disease.findall("SynonymList/Synonym")]
         if orpha in d:
             d[orpha].update({'xref': xrefs, 'mapping': dict(mapping)})
         else:
-            d[orpha] = {'preferred_label': name, 'synonyms': synonyms,
+            d[orpha] = {'preferred_label': name, 'synonym': synonyms,
                         'xref': xrefs, 'mapping': dict(mapping), '_id': orpha}
 
 
