@@ -5,6 +5,7 @@ from tqdm import tqdm
 from databuild.ctdbase import *
 from utils.common import dump2gridfs, loadobj, timesofar
 import time
+
 columns_rename = {'GOID': 'go',
                   'InferenceGeneSymbols': 'inference_gene_symbols',
                   'PathwayID': 'pathway',
@@ -141,7 +142,7 @@ def process_genes(db, f, relationship: str):
             # dump2gridfs(sub, file_name, db)
             # mongo_collection.update_one(
             # {'_id': diseaseID},
-            #     {'$push': {
+            # {'$push': {
             #         relationship: {
             #             'filename': file_name,
             #             'mode': 'gridfs'
@@ -150,11 +151,25 @@ def process_genes(db, f, relationship: str):
 
             # insert the genes to ctdgenes collection
             # document after update is larger than 16777216
-            db.ctdgenes.update_one(
-                {'_id': diseaseID},
-                {'$push': {
-                    relationship: {'$each': sub},
-                }}, upsert=True)
+
+            import bson
+
+            doc = db.ctdgenes.find_one({"_id": diseaseID})
+            if doc:
+                len_doc = len(bson.BSON.encode(doc))
+                print(diseaseID, len_doc)
+                if len_doc < 16000000:
+                    db.ctdgenes.update_one(
+                        {'_id': diseaseID},
+                        {'$push': {
+                            relationship: {'$each': sub},
+                        }}, upsert=True)
+            else:
+                db.ctdgenes.update_one(
+                    {'_id': diseaseID},
+                    {'$push': {
+                        relationship: {'$each': sub},
+                    }}, upsert=True)
 
 
 def parse(db=None, mongo_collection=None, drop=True):
@@ -176,12 +191,12 @@ def parse(db=None, mongo_collection=None, drop=True):
                 print("parsing the  " + relationship + "data")
                 # use gridfs , the param db must be database not database.collection
                 process_genes(db, f, relationship)
-            elif relationship == "chemicals":
-                print("parsing the  " + relationship + "data")
-                process_chemicals(mongo_collection, f, relationship)
-            else:
-                print("parsing the  " + relationship + "data")
-                df = parse_csv_to_df(f)
-                parse_df(mongo_collection, df, relationship)
+                # elif relationship == "chemicals":
+                # print("parsing the  " + relationship + "data")
+                # process_chemicals(mongo_collection, f, relationship)
+                # else:
+                # print("parsing the  " + relationship + "data")
+                # df = parse_csv_to_df(f)
+                #     parse_df(mongo_collection, df, relationship)
 
     print("------------ctdbase data parsed success--------------")
