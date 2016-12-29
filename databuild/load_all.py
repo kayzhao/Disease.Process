@@ -27,7 +27,7 @@ def parse_all():
 
     # the client for mongodb database
     # client = MongoClient('mongodb://zkj1234:zkj1234@192.168.1.113:27017/src_disease')
-    client = MongoClient('mongodb://192.168.1.110:27017/src_disease')
+    client = MongoClient('mongodb://kay123:kayzhao@192.168.1.110:27017/src_disease')
     # do_parser.parse(client.src_disease.do, False)
     # hpo_parser.parse(client.src_disease.hpo, False)
     # kegg_parser.parse(client.src_disease.kegg, False)
@@ -37,12 +37,12 @@ def parse_all():
     # disgenet_parser.parse(client.src_disease.disgenet, False)
     # mesh_parser.parse(client.src_disease.mesh, False)
     # pydb_parser.parse(client.src_disease.pydb, False)
-    ndfrt_parser.parse(client.src_disease.ndfrt, True)
+    # ndfrt_parser.parse(client.src_disease.ndfrt, True)
     # orphanet_parser.parse(client.src_disease.orphanet, False)
 
     # large data
     # umls_parser.parse(client.src_disease.umls, False)
-    # ctd_parser.parse(client.src_disease, client.src_disease.ctd, False)
+    ctd_parser.parse(client.src_disease, client.src_disease.ctd, False)
 
 
 def merge_one(db_name):

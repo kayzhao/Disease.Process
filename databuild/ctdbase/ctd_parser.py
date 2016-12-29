@@ -109,7 +109,7 @@ def process_chemicals(db, f, relationship: str):
             db.update_one({'_id': diseaseID}, {'$set': {relationship.lower(): sub}}, upsert=True)
 
 
-def process_genes(db, mongo_collection, f, relationship: str):
+def process_genes(db, f, relationship: str):
     """
     # for the genes file, which is enormous, we need to do something different
     # basically same as others, but in chunks
@@ -132,27 +132,29 @@ def process_genes(db, mongo_collection, f, relationship: str):
         columns_keep = get_columns_to_keep('genes')
         df['DiseaseID'] = df['DiseaseID'].map(parse_diseaseid)
         for diseaseID, subdf in df.groupby("DiseaseID"):
-            sub = subdf[columns_keep].to_dict(orient="records")
+            sub = subdf[columns_keep].rename(columns=columns_rename).to_dict(orient="records")
             # get rid of nulls
             sub = [{k: v for k, v in s.items() if v == v} for s in sub]
+
             # dump 2 gridfs while the BSON document is to large
-            file_name = diseaseID + '_genes_' + str(time.time()) + '.pyobj'
-            dump2gridfs(sub, file_name, db)
-            mongo_collection.update_one(
+            # file_name = diseaseID + '_genes_' + str(time.time()) + '.pyobj'
+            # dump2gridfs(sub, file_name, db)
+            # mongo_collection.update_one(
+            # {'_id': diseaseID},
+            #     {'$push': {
+            #         relationship: {
+            #             'filename': file_name,
+            #             'mode': 'gridfs'
+            #         }
+            #     }}, upsert=True)
+
+            # insert the genes to ctdgenes collection
+            # document after update is larger than 16777216
+            db.ctdgenes.update_one(
                 {'_id': diseaseID},
                 {'$push': {
-                    relationship: {
-                        'filename': file_name,
-                        'mode': 'gridfs'
-                    }
+                    relationship: {'$each': sub},
                 }}, upsert=True)
-
-            # document after update is larger than 16777216
-            #     mongo_collection.update_one(
-            #         {'_id': diseaseID},
-            #         {'$push': {
-            #             relationship: {'$each': sub},
-            #         }}, upsert=True)
 
 
 def parse(db=None, mongo_collection=None, drop=True):
@@ -173,7 +175,7 @@ def parse(db=None, mongo_collection=None, drop=True):
             if relationship == "genes":
                 print("parsing the  " + relationship + "data")
                 # use gridfs , the param db must be database not database.collection
-                process_genes(db, mongo_collection, f, relationship)
+                process_genes(db, f, relationship)
             elif relationship == "chemicals":
                 print("parsing the  " + relationship + "data")
                 process_chemicals(mongo_collection, f, relationship)
