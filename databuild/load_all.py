@@ -28,6 +28,7 @@ def parse_all():
     # the client for mongodb database
     # client = MongoClient('mongodb://zkj1234:zkj1234@192.168.1.113:27017/src_disease')
     client = MongoClient('mongodb://kay123:kayzhao@192.168.1.110:27017/src_disease')
+    client = MongoClient('mongodb://192.168.1.110:27017/biodis')
     # do_parser.parse(client.src_disease.do, False)
     # hpo_parser.parse(client.src_disease.hpo, False)
     # kegg_parser.parse(client.src_disease.kegg, False)
@@ -42,7 +43,7 @@ def parse_all():
 
     # large data
     # umls_parser.parse(client.src_disease.umls, False)
-    ctd_parser.parse(client.src_disease, client.src_disease.ctd, False)
+    ctd_parser.parse(client.biodis, client.biodis.chemical, True)
 
 
 def merge_one(db_name):

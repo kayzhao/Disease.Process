@@ -107,7 +107,17 @@ def process_chemicals(db, f, relationship: str):
         for diseaseID, subdf in df.groupby("DiseaseID"):
             sub = subdf[columns_keep].rename(columns=columns_rename).to_dict(orient="records")
             sub = [{k: v for k, v in s.items() if v == v} for s in sub]  # get rid of nulls
-            db.update_one({'_id': diseaseID}, {'$set': {relationship.lower(): sub}}, upsert=True)
+            # db.update_one({'_id': diseaseID}, {'$set': {relationship.lower(): sub}}, upsert=True)
+            d = list()
+            for s in sub:
+                dic = dict()
+                dic['disease'] = diseaseID
+                for k, v in s.items():
+                    dic[k] = v
+                dic['source'] = 'CTD'
+                # print(dic)
+                d.append(dic)
+            db.insert_many(d)
 
 
 def process_genes(db, f, relationship: str):
@@ -143,7 +153,7 @@ def process_genes(db, f, relationship: str):
             # mongo_collection.update_one(
             # {'_id': diseaseID},
             # {'$push': {
-            #         relationship: {
+            # relationship: {
             #             'filename': file_name,
             #             'mode': 'gridfs'
             #         }
@@ -153,23 +163,32 @@ def process_genes(db, f, relationship: str):
             # document after update is larger than 16777216
 
             import bson
-
-            doc = db.ctdgenes.find_one({"_id": diseaseID})
-            if doc:
-                len_doc = len(bson.BSON.encode(doc))
-                print(diseaseID, len_doc)
-                if len_doc < 16000000:
-                    db.ctdgenes.update_one(
-                        {'_id': diseaseID},
-                        {'$push': {
-                            relationship: {'$each': sub},
-                        }}, upsert=True)
-            else:
-                db.ctdgenes.update_one(
-                    {'_id': diseaseID},
-                    {'$push': {
-                        relationship: {'$each': sub},
-                    }}, upsert=True)
+            # doc = db.ctdgenes.find_one({"_id": diseaseID})
+            # if doc:
+            # len_doc = len(bson.BSON.encode(doc))
+            #     # print(diseaseID, len_doc)
+            #     if len_doc < 16000000:
+            #         db.ctdgenes.update_one(
+            #             {'_id': diseaseID},
+            #             {'$push': {
+            #                 relationship: {'$each': sub},
+            #             }}, upsert=True)
+            # else:
+            #     db.ctdgenes.update_one(
+            #         {'_id': diseaseID},
+            #         {'$push': {
+            #             relationship: {'$each': sub},
+            #         }}, upsert=True)
+            d = list()
+            for s in sub:
+                dic = dict()
+                dic['disease'] = diseaseID
+                for k, v in s.items():
+                    dic[k] = v
+                dic['source'] = 'CTD'
+                # print(dic)
+                d.append(dic)
+            db.gene.insert_many(d)
 
 
 def parse(db=None, mongo_collection=None, drop=True):
@@ -190,13 +209,13 @@ def parse(db=None, mongo_collection=None, drop=True):
             if relationship == "genes":
                 print("parsing the  " + relationship + "data")
                 # use gridfs , the param db must be database not database.collection
-                process_genes(db, f, relationship)
+                # process_genes(db, f, relationship)
             elif relationship == "chemicals":
                 print("parsing the  " + relationship + "data")
                 process_chemicals(mongo_collection, f, relationship)
             else:
                 print("parsing the  " + relationship + "data")
-                df = parse_csv_to_df(f)
-                parse_df(mongo_collection, df, relationship)
+                # df = parse_csv_to_df(f)
+                # parse_df(mongo_collection, df, relationship)
 
     print("------------ctdbase data parsed success--------------")
