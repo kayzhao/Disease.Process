@@ -7,6 +7,14 @@ from utils.mongo import get_src_conn
 from collections import defaultdict
 from utils.common import dict2list
 from config import DATA_SRC_DATABASE
+import networkx as nx
+from config import db_names
+from utils.common import dict2list
+from pymongo import MongoClient
+from pymongo import MongoClient
+from databuild.pydb import file_path, __METADATA__
+from config import DATA_SRC_DATABASE
+import pandas as pd
 
 
 def get_ids_info():
@@ -228,6 +236,37 @@ def umlsid_mapping_test():
         print("%s\t%d\t%d" % (k, num_nomapping, num_mapping))
 
 
+def retrive_data():
+    print("retrive_data")
+    src_client = MongoClient('mongodb://kay123:kayzhao@192.168.1.110:27017/src_disease')
+    bio_client = MongoClient('mongodb://192.168.1.110:27017/biodis')
+    bio_client.biodis.genes.insert_many(src_client.src_disease.gene.find({}))
+    # for doc in src_client.src_disease.gene.find({}):
+    # bio_client.biodis.genes.insert_one(doc)
+
+
+def store_drug():
+    print("drug----------")
+    col_names = "doid_id	drugbank_id	disease	drug	category	n_curators	n_resources".split(
+        "\t")
+    df = pd.read_csv(file_path, header=0, sep='\t', names=col_names)
+    # df = df.rename(columns=col_names)
+    d = []
+    columns_rename = {'doid_id': 'disease_id',
+                      'disease': "disease_name",
+                      'drugbank_id': 'drug_id',
+                      'drug': 'drug_name',
+                      'category': 'category'}
+    for diseaseID, subdf in df.groupby("doid_id"):
+        subdf = subdf.rename(columns=columns_rename)
+        sub = subdf.to_dict(orient="records")
+        sub = [{k: v for k, v in s.items() if v == v} for s in sub]
+        for s in sub:
+            d.append(s)
+    bio_client = MongoClient('mongodb://kayzhao:kayzhao@192.168.1.110:27017/biodis')
+    bio_client.biodis.drug.insert_many(d)
+
+
 if __name__ == "__main__":
     # get_db_info()
     # get_ids_info()
@@ -235,17 +274,20 @@ if __name__ == "__main__":
     # doid_mapping_test()
     # umlsid_mapping_test()
 
-    g = build_did_graph()
+    # g = build_did_graph()
     # for k, v in db_xrefs.items():
     # print(k, v)
 
     # nx.write_edgelist(g, "C:/Users/Administrator/Desktop/id_xrefs.txt")
     # nx.write_adjlist(g, "C:/Users/Administrator/Desktop/ids.txt")
 
-    ID = "MESH:D010211"
-    for i in range(1, 5, 1):
-        ids = get_equiv_doid(g, ID, i)
-        print("%d \t %s" % (i, len(ids)))
-        for x in ids:
-            print(x)
+    # ID = "MESH:D010211"
+    # for i in range(1, 5, 1):
+    # ids = get_equiv_doid(g, ID, i)
+    # print("%d \t %s" % (i, len(ids)))
+    # for x in ids:
+    # print(x)
+
+    store_drug()
+
     print("success")
