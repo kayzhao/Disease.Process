@@ -36,7 +36,7 @@ def parse_ordo():
 
     for col in ['parents', 'part_of', 'tree_view', 'id']:
         df[col] = df[col].str.replace("http://www.orpha.net/ORDO/", "").str.replace("_", ":").str.upper()
-    list_attribs = ['synonyms', 'parents', 'part_of', 'tree_view', 'alternative_term']
+    list_attribs = ['synonym', 'parents', 'part_of', 'tree_view', 'alternative_term']
     for col in list_attribs:
         df[col] = df[col].str.split("|").copy()
     df.rename(columns={'id': '_id'}, inplace=True)

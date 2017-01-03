@@ -35,7 +35,7 @@ class NDFRT_item:
              'xref': {
                  'MESH': self.props.get('MeSH_DUI', []),
                  'NUI': self.props.get('NUI', []),
-                 'RXNORM_CUI': self.props.get('RxNorm_CUI', []),
+                 'RXNORM': self.props.get('RxNorm_CUI', []),
                  'SNOMEDCT': self.props.get('SNOMED_CID', []),
              },
              'drugs': self.drugs
