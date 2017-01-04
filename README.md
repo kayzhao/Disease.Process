@@ -1,7 +1,7 @@
 # Disease.Process
 
 ## Introduction
-**Disease Data Integration as a service**
+**Disease Data Integration Code**
 
 
 ## Data Sources

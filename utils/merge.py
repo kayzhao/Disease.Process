@@ -16,13 +16,15 @@ from databuild.pydb import file_path, __METADATA__
 from config import DATA_SRC_DATABASE
 import pandas as pd
 from databuild.disgenet import *
+import re
 
 
 def get_ids_info(db):
     print("get the db disease ids statistics ")
     all_ids = set()
+    print("get the db disease all_ids set ")
     all_ids.update(set([x['_id'] for x in db.find({}, {'_id': 1})]))
-
+    print(len(all_ids))
     for k, v in Counter([x.split(":", 1)[0] for x in all_ids]).items():
         print("%s \t %d" % (k, v))
 
@@ -263,6 +265,21 @@ def store_drug(db):
         for s in sub:
             d.append(s)
     return d
+
+
+def store_ndfrt_drug(docs, db):
+    print("drug----------")
+    d = []
+    for doc in docs:
+        if "drugs" in doc:
+            for x in doc['drugs']:
+                x['disease_id'] = "UMLS_CUI:" + x['umls_cui']
+                del x['umls_cui']
+                x['drug_name'] = x['name']
+                del x['name']
+                x['source'] = "National Drug File - Reference Terminology (NDF-RT)"
+                d.append(x)
+    db.insert_many(d)
 
 
 def process_disgenet_gene(file_path_gene_disease, db):
@@ -566,11 +583,33 @@ def process_doc_2_disease(docs, db):
     return d
 
 
+def process_disease_go_relations(type, disease_id_field, docs, db):
+    all_ids = set()
+    l = ['go_cc', 'go_bp', 'go_mf', 'pathways']
+    for x in docs:
+        # if set(['go_cc', 'go_bp', 'go_mf', 'pathways']).issubset(x):
+        all_ids.update(set([x[disease_id_field]]))
+    # all_ids.update(set([x[disease_id_field] for x in docs]))
+    print(len(all_ids))
+    for id in all_ids:
+        print(id)
+        db.update_one({'_id': id}, {"$set": {type: True}})
+
+
+def process_disease_relations(type, disease_id_field, docs, db):
+    all_ids = set()
+    all_ids.update(set([x[disease_id_field] for x in docs]))
+    print(len(all_ids))
+    for id in all_ids:
+        print(id)
+        db.update_one({'_id': id}, {"$set": {type: True}})
+
+
 if __name__ == "__main__":
     src_client = MongoClient('mongodb://kay123:kayzhao@192.168.1.110:27017/src_disease')
     bio_client = MongoClient('mongodb://kayzhao:kayzhao@192.168.1.110:27017/biodis')
 
-    get_ids_info(bio_client.biodis.disease)
+    # get_ids_info(bio_client.biodis.disease)
     # get_db_xrefs()
     # doid_mapping_test()
     # umlsid_mapping_test()
@@ -590,14 +629,13 @@ if __name__ == "__main__":
     # print(x)
 
     # store_drug()
+    # store_ndfrt_drug(src_client.src_disease.ndfrt.find({}), bio_client.biodis.drug)
 
+    # print("Disgenet snps and genes")
     # d_gene = process_disgenet_gene(file_path_gene_disease, bio_client.biodis.gene)
     # d_snp = process_disgenet_snp(file_path_snp_disease)
-
-    # bio_client = MongoClient('mongodb://kayzhao:kayzhao@192.168.1.110:27017/biodis')
     # bio_client.biodis.snp.insert_many(d_snp)
-    # bio_client.biodis.gene.insert_many(d_gene)
-    # d_snp = process_disgenet_gene(file_path_snp_disease)
+    # bio_client.biodis.genes.insert_many(d_gene)
 
     # print("do")
     # process_do(src_client.src_disease.do.find({}), bio_client.biodis.do)
@@ -625,5 +663,28 @@ if __name__ == "__main__":
 
     # print("merge all to disease")
     # process_doc_2_disease(bio_client.biodis.do.find({}), bio_client.biodis.disease)
+
+    # umls drugs
+    # process_disease_relations(
+    # "drugs",
+    # bio_client.biodis.do.find({"_id": {'$regex': "^UMLS_CUI"}}),
+    # bio_client.biodis.disease
+    # )
+
+    # the disease associations collection
+    # process_disease_relations(
+    # "chemicals",
+    #     "disease_id",
+    #     bio_client.biodis.chemical.find(),
+    #     bio_client.biodis.disease
+    # )
+
+    # the disease associations collection
+    process_disease_go_relations(
+        "gos",
+        "_id",
+        bio_client.biodis.go.find(),
+        bio_client.biodis.disease
+    )
 
     print("success")
