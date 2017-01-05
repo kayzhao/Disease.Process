@@ -9,8 +9,9 @@ import bson
 
 
 def load_kegg_data():
-    # ID	Name	Description	Category	Gene	Drug	Marker	Reference	Other DBs
-    col_names = ['_id', 'name', 'description', 'category', 'genes', 'drugs', 'markers', 'reference', 'xref']
+    # ID	Name	Description	Category	Gene	Drug	Envfactor	Carcinogen	Comment	Marker	Reference	Other DBs
+    col_names = ['_id', 'name', 'description', 'category', 'genes', 'drugs', 'envfactors', 'carcinogen', 'comment',
+                 'markers', 'reference', 'xref']
     df = pd.read_csv(diseases_path, sep="\t", comment='#', names=col_names)
     # change to list of dict
     d = []
@@ -21,52 +22,73 @@ def load_kegg_data():
     for record in df.apply(lambda x: x.dropna().to_dict(), axis=1):
         # if '_id' in record:
         # record['_id'] = "KEGG:" + record["_id"]
-
+        # record = {k: v.replace("%", "#") for k, v in record.items()}
+        # print(record)
         if 'drugs' in record:
             drugs = []
-            for x in re.split(",| ", record['drugs']):
+            for x in re.split("\\|", record['drugs'].replace("%", "#")):
                 if len(x) > 0:
-                    drugs.append(x)
+                    x = x.strip()
+                    if ':' in x:
+                        name = x[:x.find("#")].strip().strip(',')
+                        refs = re.split(" |[,;#]|", x[x.find("#"):])
+                        refs = [x for x in refs if len(x) > 0]
+                        drugs.append({
+                            'name': name,
+                            'ref': list2dict(refs)
+                        })
+                    else:
+                        name = x.strip().strip(',')
+                        drugs.append({
+                            'name': name,
+                        })
+            # print(drugs)
             record['drugs'] = drugs
+
+        # if 'drugs' in record:
+        # drugs = []
+        # for x in re.split(",| ", record['drugs']):
+        # if len(x) > 0:
+        # drugs.append(x)
+        #     record['drugs'] = drugs
 
         if 'genes' in record:
             genes = []
-            for x in re.split("\\|", record['genes']):
+            for x in re.split("\\|", record['genes'].replace("%", "#")):
                 if len(x) > 0:
-                    x = x.strip()
-                    if 'HSA:' in x:
-                        gene_name = x[:x.find("HSA:")].strip().strip(',')
-                        gene_refs = re.split(" |[,;]", x[x.find("HSA:"):])
-                        gene_refs = [x for x in gene_refs if len(x) > 0]
+                    if ':' in x:
+                        name = x[:x.find("#")].strip().strip(',')
+                        refs = re.split(" |[,;#]|", x[x.find("#"):])
+                        refs = [x for x in refs if len(x) > 0]
                         genes.append({
-                            'gene_name': gene_name,
-                            'gene_ref': list2dict(gene_refs)
+                            'name': name,
+                            'ref': list2dict(refs)
                         })
                     else:
-                        gene_name = x.strip().strip(',')
+                        name = x.strip().strip(',')
                         genes.append({
-                            'gene_name': gene_name,
+                            'name': name,
                         })
             # print(genes)
             record['genes'] = genes
 
         if 'markers' in record:
             markers = []
-            for x in re.split("\\|", record['markers']):
+            for x in re.split("\\|", record['markers'].replace("%", "#")):
                 if len(x) > 0:
                     x = x.strip()
-                    if 'HSA:' in x:
-                        gene_name = x[:x.find("HSA:")].strip().strip(',')
-                        gene_refs = re.split(" |[,;]", x[x.find("HSA:"):])
-                        gene_refs = [x for x in gene_refs if len(x) > 0]
+                    if ':' in x:
+                        name = x[:x.find("#")].strip().strip(',')
+                        refs = re.split(" |[,;#]|", x[x.find("#"):])
+                        refs = [x for x in refs if len(x) > 0]
                         markers.append({
-                            'gene_name': gene_name,
-                            'gene_ref': list2dict(gene_refs)
+                            'name': name,
+                            'ref': list2dict(refs)
                         })
                     else:
-                        gene_name = x.strip().strip(',')
+                        name = x.strip().strip(',')
                         markers.append({
-                            'gene_name': gene_name,
+                            'name': name,
                         })
             # print(markers)
             record['markers'] = markers
@@ -109,6 +131,9 @@ def parse(mongo_collection=None, drop=True):
     print("------------kegg data parsing--------------")
     kegg_disease = load_kegg_data()
     print("load kegg success")
-    db.insert_many(kegg_disease)
+    for x in kegg_disease:
+        print(x)
+        db.insert_one(x)
+    # db.insert_many(kegg_disease)
     print("insert kegg success")
     print("------------kegg data parsed success--------------")

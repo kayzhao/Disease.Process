@@ -246,7 +246,7 @@ def retrive_data():
     # bio_client.biodis.genes.insert_one(doc)
 
 
-def store_drug(db):
+def store_py_drug(client):
     print("drug----------")
     col_names = "doid_id	drugbank_id	disease	drug	category	n_curators	n_resources".split(
         "\t")
@@ -260,11 +260,13 @@ def store_drug(db):
                       'category': 'category'}
     for diseaseID, subdf in df.groupby("doid_id"):
         subdf = subdf.rename(columns=columns_rename)
+        subdf['drug_id'] = subdf['drug_id'].apply(lambda x: "DrugBank:" + x)
         sub = subdf.to_dict(orient="records")
         sub = [{k: v for k, v in s.items() if v == v} for s in sub]
         for s in sub:
             d.append(s)
-    return d
+
+    client.biodis.drug.insert_many(d)
 
 
 def store_ndfrt_drug(docs, db):
@@ -351,6 +353,55 @@ def process_disgenet_snp(file_path_snp_disease):
     return d
 
 
+def process_kegg_relations(docs, client):
+    print("kegg disease")
+    genes_d = []
+    drug_d = []
+    for doc in docs:
+        print(doc['_id'])
+        if "drugs" in doc:
+            for x in doc['drugs']:
+                dic = dict()
+                dic['disease_id'] = doc['_id']
+                dic['drug_name'] = x['name']
+                dic['source'] = "(KEGG) Kyoto Encyclopedia of Genes and Genomes"
+                if 'ref' in x:
+                    if 'DG' in x['ref']:
+                        # dic['drug_ref'] = ["KEGG:" + r for r in x['ref']['DG']]
+                        dic['drug_id'] = "KEGG:" + x['ref']['DG'][0]
+                        dic['drug_id_type'] = "DGroup"
+                    if 'DR' in x['ref']:
+                        # dic['drug_ref'] = ["KEGG:" + r for r in x['ref']['DR']]
+                        dic['drug_id'] = "KEGG:" + x['ref']['DR'][0]
+                        dic['drug_id_type'] = "Drug"
+                drug_d.append(dic)
+
+        if "genes" in doc:
+            for x in doc['genes']:
+                dic = dict()
+                dic['disease_id'] = doc['_id']
+                dic['gene_name'] = x['name']
+                dic['source'] = "(KEGG) Kyoto Encyclopedia of Genes and Genomes"
+                if 'ref' in x:
+                    dic['gene_ref'] = x['ref']
+                dic['type'] = 'Gene'
+                genes_d.append(dic)
+
+        if "markers" in doc:
+            for x in doc['markers']:
+                dic = dict()
+                dic['disease_id'] = doc['_id']
+                dic['gene_name'] = x['name']
+                dic['source'] = "(KEGG) Kyoto Encyclopedia of Genes and Genomes"
+                if 'ref' in x:
+                    dic['gene_ref'] = x['ref']
+                dic['type'] = 'Marker'
+                genes_d.append(dic)
+    # insert
+    # client.biodis.gene.insert_many(genes_d)
+    client.biodis.drug.insert_many(drug_d)
+
+
 def process_do(docs, db):
     d = []
     for doc in docs:
@@ -428,10 +479,10 @@ def process_kegg(docs, db):
                 dic[k] = v
         db_d = db.find_one({"_id": dic['_id']})
         if db_d and "source" in db_d:
-            db_d['source'].append('KEGG')
+            db_d['source'].append('(KEGG) Kyoto Encyclopedia of Genes and Genomes')
             dic['source'] = list(set(db_d['source']))
         else:
-            dic['source'] = ['KEGG']
+            dic['source'] = ['(KEGG) Kyoto Encyclopedia of Genes and Genomes']
 
         '''
         only record the relations exist
@@ -596,6 +647,23 @@ def process_disease_go_relations(type, disease_id_field, docs, db):
         db.update_one({'_id': id}, {"$set": {type: True}})
 
 
+'''
+the kegg relations
+'''
+
+
+def process_disease_kegg_relations(type, disease_id_field, docs, db):
+    all_ids = set()
+    for x in docs:
+        if type in x:
+            all_ids.update(set([x[disease_id_field]]))
+    # all_ids.update(set([x[disease_id_field] for x in docs]))
+    print(len(all_ids))
+    for id in all_ids:
+        print(id)
+        db.update_one({'_id': id}, {"$set": {type: True}})
+
+
 def process_disease_relations(type, disease_id_field, docs, db):
     all_ids = set()
     all_ids.update(set([x[disease_id_field] for x in docs]))
@@ -628,7 +696,8 @@ if __name__ == "__main__":
     # for x in ids:
     # print(x)
 
-    # store_drug()
+    # drug relations
+    # store_py_drug(bio_client)
     # store_ndfrt_drug(src_client.src_disease.ndfrt.find({}), bio_client.biodis.drug)
 
     # print("Disgenet snps and genes")
@@ -647,7 +716,7 @@ if __name__ == "__main__":
     # process_orphanet(src_client.src_disease.orphanet.find({}), bio_client.biodis.do)
 
     # print("kegg")
-    # process_kegg(src_client.src_disease.kegg.find({}), bio_client.biodis.do)
+    # process_kegg(src_client.src_disease.kegg.find({}), bio_client.biodis.disease_no_umls)
 
     # print("hpo")
     # process_kegg(src_client.src_disease.hpo.find({}), bio_client.biodis.do)
@@ -662,7 +731,9 @@ if __name__ == "__main__":
     # process_omim(src_client.src_disease.omim.find({}), bio_client.biodis.do)
 
     # print("merge all to disease")
-    # process_doc_2_disease(bio_client.biodis.do.find({}), bio_client.biodis.disease)
+    # process_doc_2_disease(
+    # bio_client.biodis.disease_no_umls.find({"_id": {'$regex': "^KEGG"}}),
+    #     bio_client.biodis.disease)
 
     # umls drugs
     # process_disease_relations(
@@ -672,19 +743,21 @@ if __name__ == "__main__":
     # )
 
     # the disease associations collection
-    # process_disease_relations(
-    # "chemicals",
-    #     "disease_id",
-    #     bio_client.biodis.chemical.find(),
+    # process_disease_kegg_relations(
+    # "markers",
+    # "_id",
+    #     bio_client.biodis.disease_no_umls.find({"_id": {'$regex': "^KEGG"}}),
     #     bio_client.biodis.disease
     # )
 
     # the disease associations collection
-    process_disease_go_relations(
-        "gos",
-        "_id",
-        bio_client.biodis.go.find(),
-        bio_client.biodis.disease
-    )
+    # process_disease_go_relations(
+    # "gos",
+    #     "_id",
+    #     bio_client.biodis.go.find(),
+    #     bio_client.biodis.disease
+    # )
+
+    # process_kegg_relations(src_client.src_disease.kegg.find({}), bio_client)
 
     print("success")

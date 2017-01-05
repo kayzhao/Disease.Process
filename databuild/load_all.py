@@ -31,14 +31,14 @@ def parse_all():
     # client = MongoClient('mongodb://192.168.1.110:27017/biodis')
     # do_parser.parse(client.src_disease.do, False)
     # hpo_parser.parse(client.src_disease.hpo, False)
-    # kegg_parser.parse(client.src_disease.kegg, False)
+    kegg_parser.parse(client.src_disease.kegg_new, True)
     # efo_parser.parse(client.src_disease.efo, False)
     # omim_parser.parse(client.src_disease.omim, False)
 
     # disgenet_parser.parse(client.src_disease.disgenet, False)
     # mesh_parser.parse(client.src_disease.mesh, False)
     # pydb_parser.parse(client.src_disease.pydb, False)
-    ndfrt_parser.parse(client.src_disease.ndfrt, True)
+    # ndfrt_parser.parse(client.src_disease.ndfrt, True)
     # orphanet_parser.parse(client.src_disease.orphanet, True)
 
     # large data
