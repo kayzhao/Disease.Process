@@ -6,10 +6,13 @@ from databuild.disgenet import *
 
 
 def format_ctd_gene_data(docs, collection):
+    num = 0
     for doc in docs:
+        num += 1
+        print(num)
         if doc['source'] == 'The Comparative Toxicogenomics Database':
             if "gene_id" in doc:
-                print(doc['disease_id'], doc['gene_id'])
+                # print(doc['disease_id'], doc['gene_id'])
                 gene_id = str(doc['gene_id'])
                 collection.update_one({'_id': doc['_id']}, {'$set': {"gene_id": gene_id}}, upsert=True)
 
@@ -98,12 +101,12 @@ if __name__ == "__main__":
     bio_client = MongoClient('mongodb://kayzhao:kayzhao@192.168.1.110:27017/biodis')
 
     # # Disgenet genes
-    # process_disgenet_gene(file_path_gene_disease, bio_client.biodis.gene)
+    process_disgenet_gene(file_path_gene_disease, bio_client.biodis.gene)
     #
     # # kegg gene
     # process_kegg_relations(src_client.src_disease.kegg.find({}), bio_client.biodis.gene)
 
     # format the gene data
-    format_ctd_gene_data(bio_client.biodis.gene.find({}), bio_client.biodis.gene)
+    # format_ctd_gene_data(bio_client.biodis.gene.find({}), bio_client.biodis.gene)
 
     print("success")
