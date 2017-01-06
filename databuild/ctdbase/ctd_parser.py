@@ -6,18 +6,29 @@ from databuild.ctdbase import *
 from utils.common import dump2gridfs, loadobj, timesofar
 import time
 
-columns_rename = {'GOID': 'go',
-                  'InferenceGeneSymbols': 'inference_gene_symbols',
-                  'PathwayID': 'pathway',
-                  'CasRN': 'casrn',
-                  'ChemicalID': 'chemical',
-                  'DirectEvidence': 'direct_evidence',
-                  'InferenceGeneSymbol': 'inference_gene_symbol',
-                  'InferenceScore': 'inference_score',
-                  'OmimIDs': 'omim',
-                  'GeneID': 'gene',
-                  'InferenceChemicalName': 'inference_chemical_name',
-                  'PubMedIDs': 'pubmed'}
+columns_rename = {
+    'DiseaseID': 'disease_id',
+    'DiseaseName': 'disease_name',
+    'OmimIDs': 'omim_ids',
+    'PubMedIDs': 'pubmed',
+    'DirectEvidence': 'direct_evidence',
+    'InferenceGeneSymbol': 'inference_gene_symbol',
+    'InferenceScore': 'inference_score',
+    'InferenceGeneSymbols': 'inference_gene_symbols',
+
+    'ChemicalID': 'chemical_id',
+    'CasRN': 'casrn',
+
+    'GeneID': 'gene_id',
+    'InferenceChemicalName': 'inference_chemical_name',
+
+    'PathwayID': 'pathway_id',
+    'PathwayName': 'pathway_name',
+
+    'GOID': 'go_id',
+    'GOName': 'go_name',
+    'InferenceGeneQty': 'inference_gene_qty',
+}
 
 
 def parse_diseaseid(did: str):
@@ -73,11 +84,12 @@ def parse_df(db, df, relationship: str):
     """
     df is parsed and added to mongodb (db)
     """
-    columns_keep = get_columns_to_keep(relationship)
+    # columns_keep = get_columns_to_keep(relationship)
     total = len(set(df.DiseaseID))
 
     for diseaseID, subdf in tqdm(df.groupby("DiseaseID"), total=total):
-        sub = subdf[columns_keep].rename(columns=columns_rename).to_dict(orient="records")
+        sub = subdf.rename(columns=columns_rename).to_dict(orient="records")
+        # sub = subdf[columns_keep].rename(columns=columns_rename).to_dict(orient="records")
         sub = [{k: v for k, v in s.items() if v == v} for s in sub]  # get rid of nulls
         db.update_one({'_id': diseaseID}, {'$set': {relationship.lower(): sub}}, upsert=True)
 
@@ -154,9 +166,9 @@ def process_genes(db, f, relationship: str):
             # {'_id': diseaseID},
             # {'$push': {
             # relationship: {
-            #             'filename': file_name,
-            #             'mode': 'gridfs'
-            #         }
+            # 'filename': file_name,
+            # 'mode': 'gridfs'
+            # }
             #     }}, upsert=True)
 
             # insert the genes to ctdgenes collection

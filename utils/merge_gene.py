@@ -66,7 +66,7 @@ def process_disgenet_gene(file_path_gene_disease, db):
     db.insert_many(d)
 
 
-def process_kegg_relations(docs, db):
+def process_kegg_gene(docs, db):
     print("kegg disease")
     genes_d = []
     for doc in docs:
@@ -96,15 +96,38 @@ def process_kegg_relations(docs, db):
     db.insert_many(genes_d)
 
 
+def process_omim_gene(docs, db):
+    print("omim disease")
+    genes_d = []
+    for doc in docs:
+        print(doc['_id'])
+        if "genes" in doc:
+            for x in doc['genes']:
+                if 'entrezgene' in x:
+                    x['gene_id'] = x['entrezgene']
+                    x['source'] = "OMIM (Online Mendelian Inheritance in Man)"
+                    x['disease_id'] = doc['_id']
+                    genes_d.append(x)
+                    # x['source'] = "OMIM (Online Mendelian Inheritance in Man)"
+                    # x['disease_id'] = doc['_id']
+                    # genes_d.append(x)
+
+    # insert
+    db.insert_many(genes_d)
+
+
 if __name__ == "__main__":
     src_client = MongoClient('mongodb://kay123:kayzhao@192.168.1.110:27017/src_disease')
     bio_client = MongoClient('mongodb://kayzhao:kayzhao@192.168.1.110:27017/biodis')
 
     # # Disgenet genes
-    process_disgenet_gene(file_path_gene_disease, bio_client.biodis.gene)
-    #
+    # process_disgenet_gene(file_path_gene_disease, bio_client.biodis.gene)
+
     # # kegg gene
-    # process_kegg_relations(src_client.src_disease.kegg.find({}), bio_client.biodis.gene)
+    # process_kegg_gene(src_client.src_disease.kegg.find({}), bio_client.biodis.gene)
+
+    # omim gene
+    process_omim_gene(src_client.src_disease.omim.find({}), bio_client.biodis.gene)
 
     # format the gene data
     # format_ctd_gene_data(bio_client.biodis.gene.find({}), bio_client.biodis.gene)
