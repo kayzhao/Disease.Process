@@ -46,46 +46,5 @@ def parse_all():
     # ctd_parser.parse(client.biodis, client.biodis.chemical, True)
 
 
-def merge_one(db_name):
-    disease = MongoClient().disease.disease
-    g = build_did_graph()
-    db = MongoClient().disease[db_name]
-    if db.count() == 0:
-        print("Warning: {} is empty".format(db))
-    for doc in db.find():
-        doids = get_equiv_dtype_id(g, doc['_id'])
-        for doid in doids:
-            disease.update_one({'_id': doid}, {'$push': {db_name: doc}}, upsert=True)
-
-
-def merge(mongo_collection=None, drop=True):
-    # # merge docs
-    if mongo_collection:
-        disease = mongo_collection
-    else:
-        client = MongoClient()
-        disease = client.disease.disease
-    if drop:
-        disease.drop()
-
-    g = build_did_graph()
-
-    # make initial primary d with all DOID docs
-    db = MongoClient().disease.do
-    d = [{'_id': doc['_id'], 'do': doc} for doc in db.find()]
-    disease.insert_many(d)
-
-    # fill in from other sources
-    for db_name in tqdm(set(db_names) - {'do'}):
-        print(db_name)
-        db = MongoClient().disease[db_name]
-        if db.count() == 0:
-            print("Warning: {} is empty".format(db))
-        for doc in db.find():
-            doids = get_equiv_dtype_id(g, doc['_id'])
-            for doid in doids:
-                disease.update_one({'_id': doid}, {'$push': {db_name: doc}}, upsert=True)
-
-
 if __name__ == '__main__':
     parse_all()
