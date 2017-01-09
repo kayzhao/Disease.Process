@@ -2,9 +2,9 @@ __author__ = 'kayzhao'
 
 __METADATA__ = {
     "src_name": 'MiRNA',
-    "src_url": 'https://uts.nlm.nih.gov/home.html',
-    "version": "2016",
-    "field": "umls",
+    "src_url": '',
+    "version": "",
+    "field": "",
     "license": "",
     "license_url": ""
 }
@@ -21,3 +21,4 @@ DATA_DIR_MIRNA = os.path.join(DATA_DIR, "disease_miRNA")
 diseases_path = os.path.join(DATA_DIR_MIRNA, "diseases.txt")
 hdmm_path = os.path.join(DATA_DIR_MIRNA, "HMDD2.txt")
 miR2disease_path = os.path.join(DATA_DIR_MIRNA, "miR2Disease.txt")
+miR2target_path = os.path.join(DATA_DIR_MIRNA, "miRtar.txt")
