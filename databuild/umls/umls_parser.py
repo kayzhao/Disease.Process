@@ -204,7 +204,7 @@ def load_mrrel_rrf(db):
                     {'$set': {"ruis": ruis, "relationships": relationships}}, upsert=True)
 
 
-def get_mrconso_xref_nums(db):
+def get_mrconso_xref_nums(docs):
     '''
 
     :param db:
@@ -213,15 +213,14 @@ def get_mrconso_xref_nums(db):
     1.{umls_cui:source_ids}
     2.{'all_xref_ids':list}
     '''
-    docs = db.find({'xref': {'$exists': True}}, {'xref': 1})
     all_data = dict()
-
     all_ids = set()
     all_umls_xrefs = dict()
     for doc in docs:
-        one_xref = set(dict2list(doc['xref']))
-        all_ids.update(one_xref)
-        all_umls_xrefs[doc['_id']] = list(one_xref)
+        if 'xref' in doc:
+            one_xref = set(dict2list(doc['xref']))
+            all_ids.update(one_xref)
+            all_umls_xrefs[doc['_id']] = list(one_xref)
         print(len(all_ids))
 
     # xref ids data
