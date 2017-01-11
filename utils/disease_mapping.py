@@ -6,7 +6,11 @@ from collections import defaultdict
 from utils.common import dict2list
 from pymongo import MongoClient
 
-id_types = ["UMLS_CUI", "HP", "DOID", "KEGG", "MESH", "OMIM", "EFO", "ORPHANET"]
+id_types = [
+    "UMLS_CUI", "HP", "DOID", "KEGG", "MESH", "OMIM", "ICD9CM", "ICD10CM",
+    "EFO", "ORPHANET", "NCI", "RXNORM", "NDFRT", "SNOMEDCT", "OTHER"
+]
+
 xref_types = [
     "KEGG", "STEDMAN", "MUCOUS", "MUSCULARIS", "SWEAT", "HMDB", "METACYC", "GALEN",
     "HPPO", "LIPID_MAPS", "SNOMEDCT", "MONARCH", "REAXYS", "TAO", "KNAPSACK",
@@ -140,8 +144,8 @@ def id_mapping_test(xref_docs, all_diseases_docs, dtype="UMLS", cutoff=3):
                 print("%s\t%d\t%d" % (k, num_nomapping, num_mapping))
 
 
-def single_test(id, g, dtype):
-    for i in range(1, 11, 1):
+def single_test(id, g, dtype, cutoff=3):
+    for i in range(1, cutoff, 1):
         ids = get_equiv_dtype_id(g, id, i, dtype=dtype)
         print("%d \t %s" % (i, len(ids)))
         print(ids)
@@ -165,13 +169,113 @@ def get_disease_data(all_disease_docs):
     return all_ids
 
 
+def get_id_mapping_statics(id_map_docs, step="step 1"):
+    print("get the dis map ids statistics ")
+    d = dict()
+    for x in id_types:
+        d[x] = dict()
+        for y in id_types:
+            d[x][y.lower()] = 0
+
+    print(d)
+    for doc in id_map_docs:
+        type = doc['_id'].split(':', 1)[0]
+        if type not in id_types:
+            continue
+        # type to itself
+        d[type][type.lower()] += 1
+        for k, v in doc.items():
+            # print(k, v)
+            if k.upper() in id_types and len(v) > 0:
+                d[type][k] += 1
+
+    # append the value to
+    f = open("D:/disease/mapping/disease_ids_info.txt", 'a', encoding='utf-8')
+    f.write("\n this is for the {} statistics\n".format(step))
+    for k, v in d.items():
+        f.write('{}\t'.format(k))
+
+        for key in v.keys():
+            f.write('{}\t'.format(key))
+        f.write('\n\t')
+
+        for k1, v1 in v.items():
+            f.write('{}\t'.format(v1))
+            print("%s\t %d" % (k1, v1))
+        f.write('\n')
+    f.close()
+
+
+def store_map_step1(dis, dis_map):
+    print("store_map_step1")
+    # docs = dis_xref.find({'xref': {'$exists': True}}, {'xref': 1})
+    docs = dis.find({})
+    for doc in docs:
+        type = doc['_id'].split(':', 1)[0]
+        if type not in id_types:
+            continue
+        d = dict()
+        d["_id"] = doc['_id']
+        if 'xref' in doc:
+            d['other'] = []
+            for k, v in doc['xref'].items():
+                if k in id_types:
+                    if k == 'HP':
+                        d[k.lower()] = v
+                    else:
+                        d[k.lower()] = [k + ":" + x for x in v]
+                else:
+                    for x in v:
+                        d['other'].append(k + ":" + x)
+
+        # get rid of null
+        one_doc = {k: v for k, v in d.items() if len(v) != 0}
+        print(one_doc['_id'])
+        dis_map.insert_one(one_doc)
+    print("insert success")
+
+
+def store_map_step2(dis_xref, dis_map):
+    print('step 2')
+
+
+def store_map_step3(dis_xref, dis_map):
+    print("step 3")
+
+
+def store_map_step4(dis_xref, dis_map):
+    print("step 4")
+
+
+def build_dis_map(dis_xref, dis_map):
+    '''
+    build the disease id map for the id mapping
+    '''
+
+    # the first step , get the xref data
+    store_map_step1(dis_xref, dis_map)
+    get_id_mapping_statics(dis_map.find({}), step='step 1')
+
+    exit()
+
+    # the second step, use the umls xref data
+    store_map_step2(dis_xref, dis_map)
+    get_id_mapping_statics(dis_map, step='step 2')
+
+    store_map_step3(dis_xref, dis_map)
+    get_id_mapping_statics(dis_map, step='step 3')
+
+    store_map_step4(dis_xref, dis_map)
+    get_id_mapping_statics(dis_map, step='step 4')
+
+
 if __name__ == "__main__":
-    src_client = MongoClient('mongodb://kay123:kayzhao@192.168.1.110:27017/src_disease')
+    # src_client = MongoClient('mongodb://kay123:kayzhao@192.168.1.110:27017/src_disease')
     bio_client = MongoClient('mongodb://kayzhao:kayzhao@192.168.1.113:27017/biodis')
 
-    all_docs = bio_client.biodis.disease.find({}, {'_id': 1})
-    disease_docs = bio_client.biodis.disease.find({'xref': {'$exists': True}}, {'xref': 1})
-    disease_no_umls_docs = bio_client.biodis.disease_no_umls.find({'xref': {'$exists': True}}, {'xref': 1})
+    # all_docs = bio_client.biodis.disease.find({}, {'_id': 1})
+    # disease_docs = bio_client.biodis.disease.find({'xref': {'$exists': True}}, {'xref': 1})
+    # disease_no_umls_docs = bio_client.biodis.disease_no_umls.find({'xref': {'$exists': True}}, {'xref': 1})
     '''
     get the data info
     '''
@@ -199,7 +303,7 @@ if __name__ == "__main__":
     '''
     # id_mapping_test("DOID")
     # id_mapping_test(disease_docs, all_docs, dtype="UMLS_CUI", cutoff=3)
-    id_mapping_test(disease_no_umls_docs, all_docs, dtype="UMLS_CUI", cutoff=3)
+    # id_mapping_test(disease_no_umls_docs, all_docs, dtype="UMLS_CUI", cutoff=3)
 
     '''
     single id test
@@ -211,4 +315,11 @@ if __name__ == "__main__":
 
 
     # get_umls_data()
+
+    '''
+    build id map
+    '''
+    # build_dis_map(bio_client.biodis.disease_no_umls, bio_client.biodis.dismap_no_umls)
+    # store_map_step1(bio_client.biodis.disease_no_umls, bio_client.biodis.dismap_no_umls)
+    get_id_mapping_statics(bio_client.biodis.dismap_no_umls.find({}), step="step 1")
     print("success")
