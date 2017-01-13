@@ -91,6 +91,7 @@ def build_did_graph(xref_docs):
     g = nx.Graph()
     for doc in xref_docs:
         for xref in dict2list(doc['xref']):
+            # if xref too large select some types
             if xref.split(":", 1)[0] in xref_types:
                 g.add_edge(doc['_id'].upper(), xref.upper())
     return g
@@ -224,7 +225,9 @@ def get_id_mapping_statics(dismap, step="step 1"):
                 d[type][k] += 1
 
     # append the value to
-    f = open("D:/disease/mapping/disease_ids_info.txt", 'a', encoding='utf-8')
+    path = "D:/disease/mapping/disease_ids_info.txt"
+    path = "/home/zkj/disease/mapping/disease_ids_info.txt"
+    f = open(path, 'a', encoding='utf-8')
     f.write("\n this is for the {} statistics\n".format(step))
     for k, v in d.items():
         f.write('{}\t'.format(k))
@@ -495,7 +498,7 @@ def store_map_step3(dis, dismap):
     print("build id graph success")
 
     # update the mapping list
-    map_docs = dismap.find({})
+    map_docs = dismap.find({}, no_cursor_timeout=True)
     for doc in map_docs:
         did = doc['_id']
         print("store_map_step3: id {}".format(doc['_id']))
@@ -537,26 +540,33 @@ def build_dis_map(client):
     disease = client.biodis.disease
     dismap = client.biodis.dismap
     did2umls = client.biodis.did2umls
+    dismap_all_step1 = client.biodis.dismap__all_step1
+    dismap_all_step2 = client.biodis.dismap__all_step2
+    dismap_all_step3 = client.biodis.dismap__all_step3
 
     # the first step , get the xref data
     store_map_step1(disease, dismap)
-    get_id_mapping_statics(dismap.find({}), step='step 1')
+    get_id_mapping_statics(dismap, step='step 1')
+    duplicate_collection(dismap, dismap_all_step1)
 
     # the second step, use the umls xref data
     store_map_step2(did2umls, disease, dismap)
     get_id_mapping_statics(dismap, step='step 2')
+    # remove error map doc
+    remove_error_map_doc(dismap, disease)
+    duplicate_collection(dismap, dismap_all_step2)
+
 
     # the third step, build the xref graph
     store_map_step3(disease, dismap)
     get_id_mapping_statics(dismap, step='step 3')
-
-    store_map_step4(disease, dismap)
-    get_id_mapping_statics(dismap, step='step 4')
+    duplicate_collection(dismap, dismap_all_step3)
 
 
 if __name__ == "__main__":
     # src_client = MongoClient('mongodb://kay123:kayzhao@192.168.1.110:27017/src_disease')
     bio_client = MongoClient('mongodb://kayzhao:kayzhao@192.168.1.113:27017/biodis')
+    local_client = MongoClient('mongodb://kayzhao:kayzhao@127.0.0.1:27017/biodis')
 
     # all_docs = bio_client.biodis.disease.find({})
     # disease_docs = bio_client.biodis.disease.find({'xref': {'$exists': True}}, {'xref': 1})
@@ -604,7 +614,7 @@ if __name__ == "__main__":
     '''
     build id map
     '''
-
+    build_dis_map(local_client)
     # clone the collection
     # duplicate_collection(bio_client.biodis.dismap_no_umls_bak, bio_client.biodis.dismap_no_umls)
     # duplicate_collection(bio_client.biodis.dismap_no_umls, bio_client.biodis.dismap_step_1)
@@ -649,7 +659,7 @@ if __name__ == "__main__":
     '''
     remove error
     '''
-    remove_error_map_doc(bio_client.biodis.dismap_no_umls, bio_client.biodis.disease)
+    # remove_error_map_doc(bio_client.biodis.dismap_no_umls, bio_client.biodis.disease)
     # remove_did2umls_duplication(bio_client.biodis.did2umls)
 
     print("success")

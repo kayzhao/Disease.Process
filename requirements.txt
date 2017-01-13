@@ -14,6 +14,5 @@ six==1.10.0
 tqdm==4.8.4
 wget==3.2
 typing==3.5.2.2
-urlib3==1.19
 pyparsing==2.1.8
 pytest==3.0.4
