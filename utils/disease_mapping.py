@@ -91,9 +91,12 @@ def build_did_graph(xref_docs):
     g = nx.Graph()
     for doc in xref_docs:
         for xref in dict2list(doc['xref']):
-            # if xref too large select some types
-            if xref.split(":", 1)[0] in xref_types:
-                g.add_edge(doc['_id'].upper(), xref.upper())
+            type = xref.split(":", 1)[0]
+            if type not in xref_types:  # if xref too large select some types
+                continue
+            if xref.startwith("HP"):  # if xref start with HP as HP:HP:0000001
+                xref = xref.split(":", 1)[1]
+            g.add_edge(doc['_id'].upper(), xref.upper())
     return g
 
 
@@ -292,8 +295,9 @@ def complete_map_doc(dismap):
             if k.upper() in id_types and len(v) > 0:
                 v = list(set(v))  # remove the duplication
                 for x in v:
-                    # avoid the error id
-                    if x.split(':', 1)[0] not in id_types:
+                    # avoid the error type id
+                    type = x.split(':', 1)[0]
+                    if type not in id_types:
                         continue
                     dismap.update_one({'_id': x}, {'$addToSet': {did_type: did}}, upsert=True)
 
@@ -361,6 +365,7 @@ def store_map_step1(dis, dismap):
     # docs = dis_xref.find({'xref': {'$exists': True}}, {'xref': 1})
     docs = dis.find({})
     for doc in docs:
+        # print("store_map_step1: id {}".format(doc['_id']))
         type = doc['_id'].split(':', 1)[0]
         if type not in id_types:
             continue
@@ -380,7 +385,6 @@ def store_map_step1(dis, dismap):
 
         # get rid of null
         one_doc = {k: v for k, v in d.items() if len(v) != 0}
-        print(one_doc['_id'])
         dismap.insert_one(one_doc)
 
     # complete the doc
@@ -396,7 +400,7 @@ def build_did2umls(dis, did2umls):
     :return:
     """
     for doc in dis.find({"_id": {'$regex': "^UMLS_CUI"}}):
-        print("build_did2umls: id {}".format(doc['_id']))
+        # print("build_did2umls: id {}".format(doc['_id']))
         if 'xref' not in doc:
             continue
         for x in dict2list(doc['xref']):
@@ -445,7 +449,7 @@ def store_map_step2(did2umls, disease, dismap):
     map_docs = dismap.find({})
     for doc in map_docs:
         did = doc['_id']
-        print("store_map_step2: id {}".format(doc['_id']))
+        # print("store_map_step2: id {}".format(doc['_id']))
         if did in did2umls_dict:
             umls_list = did2umls_dict[did]  # get the umls list
             # update the umls_cui
@@ -526,7 +530,8 @@ def store_map_step4(dis_xref, dis_map):
 
 def duplicate_collection(collection_old, collection_new):
     print("copy start ")
-    collection_new.insert_many([x for x in collection_old.find({})])
+    for x in collection_old.find({}):
+        collection_new.insert_one(x)
     print("copy end ")
 
 
@@ -614,12 +619,15 @@ if __name__ == "__main__":
     '''
     build id map
     '''
-    build_dis_map(local_client)
+    # build_dis_map(local_client)
+
     # clone the collection
     # duplicate_collection(bio_client.biodis.dismap_no_umls_bak, bio_client.biodis.dismap_no_umls)
     # duplicate_collection(bio_client.biodis.dismap_no_umls, bio_client.biodis.dismap_step_1)
     # build_dis_map(bio_client.biodis.disease_no_umls, bio_client.biodis.dismap_no_umls)
-    # duplicate_collection(bio_client.biodis.dismap_no_umls, bio_client.biodis.dismap_step_2)
+    # duplicate_collection(bio_client.biodis.dismap_step_2, bio_client.biodis.dismap_no_umls)
+    print("step 2 rebuild dismap")
+    duplicate_collection(bio_client.biodis.dismap__all_step2, bio_client.biodis.dismap)
 
     '''
     build did 2 umls id dict
@@ -655,6 +663,15 @@ if __name__ == "__main__":
     '''
     # store_map_step3(bio_client.biodis.disease, bio_client.biodis.dismap_no_umls)
     # get_id_mapping_statics(bio_client.biodis.dismap_no_umls, step="step 3")
+
+    print("dismap_no_umls step3")
+    store_map_step3(local_client.biodis.disease, local_client.biodis.dismap_no_umls)
+    get_id_mapping_statics(local_client.biodis.dismap_no_umls, step='dismap_no_umls step 3')
+    print("dismap step3")
+    store_map_step3(local_client.biodis.disease, local_client.biodis.dismap)
+    get_id_mapping_statics(local_client.biodis.dismap, step='dismap step 3')
+
+
 
     '''
     remove error
