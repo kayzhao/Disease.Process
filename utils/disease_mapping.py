@@ -94,7 +94,7 @@ def build_did_graph(xref_docs):
             type = xref.split(":", 1)[0]
             if type not in xref_types:  # if xref too large select some types
                 continue
-            if xref.startwith("HP"):  # if xref start with HP as HP:HP:0000001
+            if xref.startswith("HP"):  # if xref start with HP as HP:HP:0000001
                 xref = xref.split(":", 1)[1]
             g.add_edge(doc['_id'].upper(), xref.upper())
     return g
@@ -626,8 +626,8 @@ if __name__ == "__main__":
     # duplicate_collection(bio_client.biodis.dismap_no_umls, bio_client.biodis.dismap_step_1)
     # build_dis_map(bio_client.biodis.disease_no_umls, bio_client.biodis.dismap_no_umls)
     # duplicate_collection(bio_client.biodis.dismap_step_2, bio_client.biodis.dismap_no_umls)
-    print("step 2 rebuild dismap")
-    duplicate_collection(bio_client.biodis.dismap__all_step2, bio_client.biodis.dismap)
+    # print("step 2 rebuild dismap")
+    # duplicate_collection(bio_client.biodis.dismap__all_step2, bio_client.biodis.dismap)
 
     '''
     build did 2 umls id dict
