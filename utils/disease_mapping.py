@@ -284,7 +284,7 @@ def complete_map_doc(dismap):
     :param dismap:
     :return:
     """
-    map_docs = dismap.find({})
+    map_docs = dismap.find({}, no_cursor_timeout=True)
     for doc in map_docs:
         did = doc['_id']
         did_type = did.split(':', 1)[0].lower()
@@ -334,7 +334,7 @@ def remove_error_map_doc(dismap, dis):
 
     print('remove the HP error docs')
     # remove the HP error docs {"_id": {'$regex': "^HP"}}
-    docs = dismap.find({})
+    docs = dismap.find({}, no_cursor_timeout=True)
     for doc in docs:
         did = doc['_id']
         # print("remove_error_map_doc error field and id: id {}".format(did))
@@ -364,7 +364,7 @@ def store_map_step1(dis, dismap):
     """
     print("store map step1")
     # docs = dis_xref.find({'xref': {'$exists': True}}, {'xref': 1})
-    docs = dis.find({})
+    docs = dis.find({}, no_cursor_timeout=True)
     for doc in docs:
         # print("store_map_step1: id {}".format(doc['_id']))
         type = doc['_id'].split(':', 1)[0]
@@ -679,7 +679,7 @@ if __name__ == "__main__":
     '''
     build id map
     '''
-    build_dis_map(local_client)
+    # build_dis_map(local_client)
 
     # clone the collection
     # duplicate_collection(bio_client.biodis.dismap_no_umls_bak, bio_client.biodis.dismap_no_umls)
@@ -713,7 +713,7 @@ if __name__ == "__main__":
     '''
     # store_map_step2(
     # kaypc_client.biodis.did2umls,
-    #     kaypc_client.biodis.disease,
+    # kaypc_client.biodis.disease,
     #     kaypc_client.biodis.dismap_2
     # )
     # get_id_mapping_statics(bio_client.biodis.dismap_no_umls, step="step 2")
@@ -730,6 +730,18 @@ if __name__ == "__main__":
     # print("dismap step3")
     # store_map_step3(local_client.biodis.disease, local_client.biodis.dismap)
     # get_id_mapping_statics(local_client.biodis.dismap, step='dismap step 3')
+
+
+    # the collection
+    disease = local_client.biodis.disease
+    dismap = local_client.biodis.dismap
+    did2umls = local_client.biodis.did2umls
+    dismap_all_step2 = local_client.biodis.dismap_step2
+    dismap_all_step3 = local_client.biodis.dismap_step3
+    duplicate_collection(dismap_all_step2, dismap)
+    store_map_step3_v2(disease, dismap)
+    get_id_mapping_statics(dismap, step='step 3')
+    duplicate_collection(dismap, dismap_all_step3)
 
     '''
     remove error
