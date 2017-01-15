@@ -5,6 +5,7 @@ from collections import Counter
 from collections import defaultdict
 from utils.common import dict2list
 from pymongo import MongoClient
+import collections
 
 id_types = [
     "UMLS_CUI", "HP", "DOID", "KEGG", "MESH", "OMIM", "ICD9CM", "ICD10CM",
@@ -224,22 +225,25 @@ def get_id_mapping_statics(dismap, step="step 1"):
         d[type][type.lower()] += 1
         for k, v in doc.items():
             # print(k, v)
-            if k.upper() in id_types and len(v) > 0:
+            if k.upper() == type or k == '_id':
+                continue
+            if len(v):
                 d[type][k] += 1
 
     # append the value to
     path = "D:/disease/mapping/dismap_info.txt"
     path = "/home/zkj/disease/mapping/dismap_info.txt"
     f = open(path, 'a', encoding='utf-8')
-    f.write("\n this is for the {} statistics\n".format(step))
-    for k, v in d.items():
+    f.write("\n\n----------------------  {}  ----------------------------\n\n".format(step))
+    for k, v in collections.OrderedDict(sorted(d.items())).items():
         f.write('{}\t'.format(k))
 
-        for key in v.keys():
+        od_v = collections.OrderedDict(sorted(v.items()))
+
+        for key in od_v.keys():
             f.write('{}\t'.format(key))
         f.write('\n\t')
-
-        for k1, v1 in v.items():
+        for k1, v1 in od_v.items():
             f.write('{}\t'.format(v1))
             # print("%s\t %d" % (k1, v1))
         f.write('\n')
@@ -564,16 +568,17 @@ def store_map_step3_v2(disease, dismap):
     map_docs = dismap.find({}, no_cursor_timeout=True)
     for doc in map_docs:
         did = doc['_id']
+        did_type = did.split(":", 1)[0]
         # print("store_map_step3: id {}".format(doc['_id']))
         for x in id_types:
-            if x == 'OTHER':
+            if x == 'OTHER' or x == did_type:
                 continue
             # has mapping ,skip this type
             if x.lower() in doc and len(doc[x.lower()]):
                 continue
             # get ids form xref graph
-            ids = get_equiv_dtype_id(g, did, cutoff=3, dtype=x)
-            # ids = get_equiv_dtype_id(g, did, cutoff=2, dtype=x)
+            # ids = get_equiv_dtype_id(g, did, cutoff=3, dtype=x)
+            ids = get_equiv_dtype_id(g, did, cutoff=2, dtype=x)
             if len(ids):
                 doc[x.lower()] = list(set(ids))
         dismap.update_one({'_id': did}, {'$set': doc}, upsert=True)
@@ -679,7 +684,7 @@ if __name__ == "__main__":
     '''
     build id map
     '''
-    # build_dis_map(local_client)
+    build_dis_map(local_client)
 
     # clone the collection
     # duplicate_collection(bio_client.biodis.dismap_no_umls_bak, bio_client.biodis.dismap_no_umls)
@@ -714,7 +719,7 @@ if __name__ == "__main__":
     # store_map_step2(
     # kaypc_client.biodis.did2umls,
     # kaypc_client.biodis.disease,
-    #     kaypc_client.biodis.dismap_2
+    # kaypc_client.biodis.dismap_2
     # )
     # get_id_mapping_statics(bio_client.biodis.dismap_no_umls, step="step 2")
 
@@ -732,16 +737,14 @@ if __name__ == "__main__":
     # get_id_mapping_statics(local_client.biodis.dismap, step='dismap step 3')
 
 
-    # the collection
-    disease = local_client.biodis.disease
-    dismap = local_client.biodis.dismap
-    did2umls = local_client.biodis.did2umls
-    dismap_all_step2 = local_client.biodis.dismap_step2
-    dismap_all_step3 = local_client.biodis.dismap_step3
-    duplicate_collection(dismap_all_step2, dismap)
-    store_map_step3_v2(disease, dismap)
-    get_id_mapping_statics(dismap, step='step 3')
-    duplicate_collection(dismap, dismap_all_step3)
+    # step static
+    # client = MongoClient('mongodb://kayzhao:kayzhao@192.168.1.113:27017/biodis')
+    # dismap_step1 = client.biodis.dismap_step1
+    # dismap_step2 = client.biodis.dismap_step2
+    # dismap_step3 = client.biodis.dismap_step3
+    # get_id_mapping_statics(dismap_step1, step='step 1')
+    # get_id_mapping_statics(dismap_step2, step='step 2')
+    # get_id_mapping_statics(dismap_step3, step='step 3')
 
     '''
     remove error
