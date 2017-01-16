@@ -8,8 +8,8 @@ from pymongo import MongoClient
 import collections
 
 id_types = [
-    "UMLS_CUI", "HP", "DOID", "KEGG", "MESH", "OMIM", "ICD9CM", "ICD10CM",
-    "EFO", "ORPHANET", "NCI", "RXNORM", "NDFRT", "SNOMEDCT", "OTHER"
+    "UMLS_CUI", "HP", "DOID", "KEGG", "MESH", "OMIM", "ICD9CM",
+    "ICD10CM", "EFO", "ORPHANET", "NCI", "RXNORM", "SNOMEDCT", "OTHER"
 ]
 
 xref_types = [
@@ -208,7 +208,7 @@ def get_disease_data(all_disease_docs):
 
 
 def get_id_mapping_statics(dismap, step="step 1"):
-    print("get the dis map ids statistics ")
+    print("----- {} --- dismap statistics ".format(step))
     d = dict()
     # init the dict
     for x in id_types:
@@ -225,6 +225,8 @@ def get_id_mapping_statics(dismap, step="step 1"):
         d[type][type.lower()] += 1
         for k, v in doc.items():
             # print(k, v)
+            if k.upper() not in id_types:
+                continue
             if k.upper() == type or k == '_id':
                 continue
             if len(v):
@@ -232,7 +234,7 @@ def get_id_mapping_statics(dismap, step="step 1"):
 
     # append the value to
     path = "D:/disease/mapping/dismap_info.txt"
-    path = "/home/zkj/disease/mapping/dismap_info.txt"
+    # path = "/home/zkj/disease/mapping/dismap_info.txt"
     f = open(path, 'a', encoding='utf-8')
     f.write("\n\n----------------------  {}  ----------------------------\n\n".format(step))
     for k, v in collections.OrderedDict(sorted(d.items())).items():
@@ -241,7 +243,7 @@ def get_id_mapping_statics(dismap, step="step 1"):
         od_v = collections.OrderedDict(sorted(v.items()))
 
         for key in od_v.keys():
-            f.write('{}\t'.format(key))
+            f.write('{}\t'.format(key.upper()))
         f.write('\n\t')
         for k1, v1 in od_v.items():
             f.write('{}\t'.format(v1))
@@ -276,6 +278,28 @@ def get_collection_fields(collection):
     return fields
 
 
+def rename_hp_xref(disease):
+    """
+
+    :param disease:
+    :return:
+    """
+    docs = disease.find({'xref': {'$exists': True}})
+    for doc in docs:
+        if 'hp' not in doc['xref']:
+            continue
+        hpids = []
+        for x in doc['xref']['hp']:
+            hpid = x.split(":", 1)[1]
+            if int(hpid):
+                hpids.append(x)
+        # update the hp ids
+        disease.update_one(
+            {'_id': doc['_id']},
+            {'$set': {'xref.hp': hpids}},
+            upsert=True)
+
+
 def complete_map_doc(dismap):
     """
     complete the map doc of the mapping ids
@@ -306,11 +330,11 @@ def complete_map_doc(dismap):
                     dismap.update_one({'_id': x}, {'$addToSet': {did_type: did}}, upsert=True)
 
 
-def remove_error_map_doc(dismap, dis):
+def remove_error_map_doc(dismap, disease):
     """
     remove the error map_doc
     :param dismap:
-    :param dis:
+    :param disease:
     :return:
     """
     print('remove the _id "KEGG:" not exists')
@@ -319,7 +343,7 @@ def remove_error_map_doc(dismap, dis):
     for doc in docs:
         did = doc['_id']
         # print("remove_error_map_doc kegg id : id {}".format(did))
-        did_doc = dis.find_one({"_id": did})
+        did_doc = disease.find_one({"_id": did})
         if did_doc is None:
             dismap.remove({"_id": did})
 
@@ -331,7 +355,7 @@ def remove_error_map_doc(dismap, dis):
         # print("remove_error_map_doc kegg fields: id {}".format(did))
         kegg = []
         for x in doc['kegg']:
-            did_doc = dis.find_one({"_id": x})
+            did_doc = disease.find_one({"_id": x})
             if did_doc is not None:
                 kegg.append(x)
         dismap.update_one({"_id": did}, {"$set": {"kegg": kegg}})
@@ -359,7 +383,7 @@ def remove_error_map_doc(dismap, dis):
             dismap.update_one({'_id': doc['_id']}, {'$unset': field_doc}, upsert=True)
 
 
-def store_map_step1(dis, dismap):
+def store_map_step1(disease, dismap):
     """
     store the xref map to build the init id map
     :param dis:
@@ -368,7 +392,7 @@ def store_map_step1(dis, dismap):
     """
     print("store map step1")
     # docs = dis_xref.find({'xref': {'$exists': True}}, {'xref': 1})
-    docs = dis.find({}, no_cursor_timeout=True)
+    docs = disease.find({}, no_cursor_timeout=True)
     for doc in docs:
         # print("store_map_step1: id {}".format(doc['_id']))
         type = doc['_id'].split(':', 1)[0]
@@ -392,9 +416,40 @@ def store_map_step1(dis, dismap):
         one_doc = {k: v for k, v in d.items() if len(v) != 0}
         dismap.insert_one(one_doc)
 
+    # remove error map doc
+    print("remove error map doc")
+    remove_error_map_doc(dismap, disease)
     # complete the doc
     print("complete the doc")
     complete_map_doc(dismap)
+
+
+def build_umls2umls(disease, umls2umls):
+    """
+    build the umls id to umls id relationships collection
+    :param disease:
+    :param umls2umls:
+    :return:
+    """
+    for doc in disease.find({"_id": {'$regex': "^UMLS_CUI"}}):
+        print("build_umls2umls: id {}".format(doc['_id']))
+        if 'relationships' not in doc:
+            continue
+        rel_doc = dict()
+        rel_doc['_id'] = doc['_id']
+        for x in doc['relationships']:
+            rel = x['relationship'].lower()
+            if rel in rel_doc:
+                rel_doc[rel].append(x['umls_cui'])
+            else:
+                rel_doc[rel] = [x['umls_cui']]
+        # remove duplications
+        for k, v in rel_doc.items():
+            if k == '_id':
+                continue
+            rel_doc[k] = list(set(v))
+        # print(rel_doc)
+        umls2umls.insert_one(rel_doc)
 
 
 def build_did2umls(dis, did2umls):
@@ -684,7 +739,7 @@ if __name__ == "__main__":
     '''
     build id map
     '''
-    build_dis_map(local_client)
+    # build_dis_map(local_client)
 
     # clone the collection
     # duplicate_collection(bio_client.biodis.dismap_no_umls_bak, bio_client.biodis.dismap_no_umls)
@@ -699,7 +754,6 @@ if __name__ == "__main__":
     '''
     # build_did2umls(bio_client.biodis.disease, bio_client.biodis.did2umls)
     # remove_did2umls_duplication(bio_client.biodis.did2umls)
-
 
     '''
     step 1
@@ -742,14 +796,21 @@ if __name__ == "__main__":
     # dismap_step1 = client.biodis.dismap_step1
     # dismap_step2 = client.biodis.dismap_step2
     # dismap_step3 = client.biodis.dismap_step3
+    # disease = client.biodis.disease
     # get_id_mapping_statics(dismap_step1, step='step 1')
     # get_id_mapping_statics(dismap_step2, step='step 2')
     # get_id_mapping_statics(dismap_step3, step='step 3')
-
+    # remove_error_map_doc(dismap_step1,disease)
+    # get_id_mapping_statics(dismap_step1, step='step 1')
     '''
     remove error
     '''
     # remove_error_map_doc(bio_client.biodis.dismap_no_umls, bio_client.biodis.disease)
     # remove_did2umls_duplication(bio_client.biodis.did2umls)
+
+
+
+    # build umls 2 umls
+    build_umls2umls(bio_client.biodis.disease_all, bio_client.biodis.umls2umls)
 
     print("success")
