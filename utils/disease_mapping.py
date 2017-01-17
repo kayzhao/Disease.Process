@@ -338,6 +338,8 @@ def remove_error_map_doc(dismap, disease):
                 kegg.append(x)
         dismap.update_one({"_id": did}, {"$set": {"kegg": kegg}})
 
+    return
+
     print('remove the HP error docs')
     # remove the HP error docs {"_id": {'$regex': "^HP"}}
     docs = dismap.find({}, no_cursor_timeout=True)
@@ -660,8 +662,8 @@ def build_dis_map(client):
     :return:
     """
     # the collection
-    disease = client.biodis.disease
-    disease_all = client.biodis.disease_all
+    disease = client.biodis.disease_all
+    # disease_all = client.biodis.disease_all
     dismap = client.biodis.dismap
     did2umls = client.biodis.did2umls
     umls2umls = client.biodis.umls2umls
@@ -675,7 +677,7 @@ def build_dis_map(client):
     duplicate_collection(dismap, dismap_all_step1)
 
     # the second step, use the umls xref data
-    build_did2umls(disease_all, did2umls, umls2umls)
+    build_did2umls(disease, did2umls, umls2umls)
     store_map_step2(did2umls, disease, dismap)
     get_id_mapping_statics(dismap, step='step 2')
     duplicate_collection(dismap, dismap_all_step2)
