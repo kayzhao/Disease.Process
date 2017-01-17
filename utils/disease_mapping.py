@@ -483,7 +483,7 @@ def update_did2umls(did2umls, umls2umls):
     # update and remove the duplication
     for doc in did2umls.find({}):
         print("remove_did2umls_duplication: id {}".format(doc['_id']))
-        umls_cuis = []
+        umls_cuis = doc['umls_cui']
         for umls in doc['umls_cui']:
             umls_cuis += umls2umls_dict[umls]
         umls_cuis = list(set(umls_cuis))  # remove duplications
