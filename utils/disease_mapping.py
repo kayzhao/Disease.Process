@@ -234,7 +234,7 @@ def get_id_mapping_statics(dismap, step="step 1"):
 
     # append the value to
     path = "D:/disease/mapping/dismap_info.txt"
-    # path = "/home/zkj/disease/mapping/dismap_info.txt"
+    path = "/home/zkj/disease/mapping/dismap_info.txt"
     f = open(path, 'a', encoding='utf-8')
     f.write("\n\n----------------------  {}  ----------------------------\n\n".format(step))
     for k, v in collections.OrderedDict(sorted(d.items())).items():
@@ -428,9 +428,6 @@ def build_did2umls(disease_all, did2umls, umls2umls):
                 umls_cui = doc['_id']
                 did2umls.update_one({'_id': x}, {'$addToSet': {'umls_cui': umls_cui}}, upsert=True)
 
-    # remove the duplication and use umls2umls relationships
-    update_did2umls(did2umls, umls2umls)
-
 
 def update_did2umls(did2umls, umls2umls):
     """
@@ -462,9 +459,11 @@ def update_did2umls(did2umls, umls2umls):
 
     # update and remove the duplication
     for doc in did2umls.find({}):
-        print("remove_did2umls_duplication: id {}".format(doc['_id']))
+        print("update_did2umls: id {}".format(doc['_id']))
         umls_cuis = doc['umls_cui']
         for umls in doc['umls_cui']:
+            if umls not in umls2umls_dict:
+                continue
             umls_cuis += umls2umls_dict[umls]
         umls_cuis = list(set(umls_cuis))  # remove duplications
         did2umls.update_one({'_id': doc['_id']}, {'$set': {'umls_cui': umls_cuis}}, upsert=True)
@@ -653,12 +652,19 @@ def build_dis_map(client):
     dismap_all_step3 = client.biodis.dismap_step3
 
     # the first step , get the xref data
-    store_map_step1(disease, dismap)
-    get_id_mapping_statics(dismap, step='step 1')
-    duplicate_collection(dismap, dismap_all_step1)
+    # store_map_step1(disease, dismap)
+    # get_id_mapping_statics(dismap, step='step 1')
+    # duplicate_collection(dismap, dismap_all_step1)
 
     # the second step, use the umls xref data
-    build_did2umls(disease_all, did2umls, umls2umls)
+    '''
+    build did2umls
+    '''
+    # build_umls2umls(disease_all,umls2umls)
+    # build_did2umls(disease_all, did2umls, umls2umls)
+    # remove the duplication and use umls2umls relationships
+    update_did2umls(did2umls, umls2umls)
+
     store_map_step2(did2umls, disease, disease_all, dismap)
     get_id_mapping_statics(dismap, step='step 2')
     duplicate_collection(dismap, dismap_all_step2)
