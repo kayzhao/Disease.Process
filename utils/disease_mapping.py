@@ -447,24 +447,32 @@ def update_did2umls(did2umls, umls2umls):
         In previous releases, some MeSH Supplementary Concept relationships were represented in this way.
     SY	source asserted synonymy.
     '''
+    # too much memory to use
     synonym_fields = ['sy', 'rl']
-    umls2umls_dict = dict()
-    for doc in umls2umls.find({}):
-        umls_rels = []
-        for k, v in doc.items():
-            if k in synonym_fields:
-                umls_rels += v
-        umls2umls_dict[doc['_id']] = list(set(umls_rels))
-    print("load umls 2 umls success")
+    # umls2umls_dict = dict()
+    # for doc in umls2umls.find({}):
+    # umls_rels = []
+    #     for k, v in doc.items():
+    #         if k in synonym_fields:
+    #             umls_rels += v
+    #     umls2umls_dict[doc['_id']] = list(set(umls_rels))
+    # print("load umls 2 umls success")
 
     # update and remove the duplication
     for doc in did2umls.find({}):
         print("update_did2umls: id {}".format(doc['_id']))
         umls_cuis = doc['umls_cui']
+        # add umls 2 umls fields
         for umls in doc['umls_cui']:
-            if umls not in umls2umls_dict:
+            u2u_doc = umls2umls.find_one({'_id': umls})
+            if u2u_doc is None:
                 continue
-            umls_cuis += umls2umls_dict[umls]
+            for k, v in u2u_doc:
+                if k in synonym_fields:
+                    umls_cuis += v
+                    # if umls not in umls2umls_dict:
+                    # continue
+                    # umls_cuis += umls2umls_dict[umls]
         umls_cuis = list(set(umls_cuis))  # remove duplications
         did2umls.update_one({'_id': doc['_id']}, {'$set': {'umls_cui': umls_cuis}}, upsert=True)
 
