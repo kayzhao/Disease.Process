@@ -429,7 +429,50 @@ def build_did2umls(disease_all, did2umls, umls2umls):
                 did2umls.update_one({'_id': x}, {'$addToSet': {'umls_cui': umls_cui}}, upsert=True)
 
 
-def update_did2umls(did2umls, umls2umls):
+def update_did2umls_v1(did2umls, umls2umls):
+    """
+        version 1 (too much memory to use)
+        remove the did2umls collection umls cuis duplication
+        update the did2umls use the umls 2 umls relationships data
+        ref url: https://www.nlm.nih.gov/research/umls/knowledge_sources/metathesaurus/release/abbreviations.html#REL
+    :param did2umls:
+    :param umls2umls:
+    :return:
+    """
+    # load umls2umls relationships
+    # init the umls to umls dict
+    '''
+    RL	the relationship is similar or "alike". the two concepts are similar or "alike".
+        In the current edition of the Metathesaurus, most relationships with this attribute are mappings provided by a source,
+        named in SAB and SL; hence concepts linked by this relationship may be synonymous, i.e. self-referential: CUI1 = CUI2.
+        In previous releases, some MeSH Supplementary Concept relationships were represented in this way.
+    SY	source asserted synonymy.
+    '''
+
+    synonym_fields = ['sy', 'rl']
+    umls2umls_dict = dict()
+    for doc in umls2umls.find({}):
+        umls_rels = []
+        for k, v in doc.items():
+            if k in synonym_fields:
+                umls_rels += v
+        umls2umls_dict[doc['_id']] = list(set(umls_rels))
+    print("load umls 2 umls success")
+
+    # update and remove the duplication
+    for doc in did2umls.find({}):
+        print("update_did2umls: id {}".format(doc['_id']))
+        umls_cuis = doc['umls_cui']
+        # add umls 2 umls fields
+        for umls in doc['umls_cui']:
+            if umls not in umls2umls_dict:
+                continue
+            umls_cuis += umls2umls_dict[umls]
+        umls_cuis = list(set(umls_cuis))  # remove duplications
+        did2umls.update_one({'_id': doc['_id']}, {'$set': {'umls_cui': umls_cuis}}, upsert=True)
+
+
+def update_did2umls_v2(did2umls, umls2umls):
     """
         remove the did2umls collection umls cuis duplication
         update the did2umls use the umls 2 umls relationships data
@@ -447,33 +490,25 @@ def update_did2umls(did2umls, umls2umls):
         In previous releases, some MeSH Supplementary Concept relationships were represented in this way.
     SY	source asserted synonymy.
     '''
-    # too much memory to use
+    # too much time to use
     synonym_fields = ['sy', 'rl']
-    # umls2umls_dict = dict()
-    # for doc in umls2umls.find({}):
-    # umls_rels = []
-    #     for k, v in doc.items():
-    #         if k in synonym_fields:
-    #             umls_rels += v
-    #     umls2umls_dict[doc['_id']] = list(set(umls_rels))
-    # print("load umls 2 umls success")
-
     # update and remove the duplication
-    for doc in did2umls.find({}):
+    for doc in did2umls.find({}, no_cursor_timeout=True):
         print("update_did2umls: id {}".format(doc['_id']))
         umls_cuis = doc['umls_cui']
         # add umls 2 umls fields
         for umls in doc['umls_cui']:
+            if '\ufeff' not in umls:
+                continue
             u2u_doc = umls2umls.find_one({'_id': umls})
             if u2u_doc is None:
                 continue
-            for k, v in u2u_doc:
-                if k in synonym_fields:
-                    umls_cuis += v
-                    # if umls not in umls2umls_dict:
-                    # continue
-                    # umls_cuis += umls2umls_dict[umls]
+            for key in synonym_fields:
+                if key in u2u_doc:
+                    umls_cuis += u2u_doc[key]
+            print(len(umls_cuis))
         umls_cuis = list(set(umls_cuis))  # remove duplications
+        umls_cuis = [x for x in umls_cuis if '\ufeff' not in x]
         did2umls.update_one({'_id': doc['_id']}, {'$set': {'umls_cui': umls_cuis}}, upsert=True)
 
 
@@ -671,7 +706,7 @@ def build_dis_map(client):
     # build_umls2umls(disease_all,umls2umls)
     # build_did2umls(disease_all, did2umls, umls2umls)
     # remove the duplication and use umls2umls relationships
-    update_did2umls(did2umls, umls2umls)
+    update_did2umls_v2(did2umls, umls2umls)
 
     store_map_step2(did2umls, disease, disease_all, dismap)
     get_id_mapping_statics(dismap, step='step 2')
