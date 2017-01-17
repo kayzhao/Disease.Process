@@ -95,8 +95,8 @@ def build_did_graph(xref_docs):
             type = xref.split(":", 1)[0]
             if type not in xref_types:  # if xref too large select some types
                 continue
-            if xref.startswith("HP"):  # if xref start with HP as HP:HP:0000001
-                xref = xref.split(":", 1)[1]
+            # if xref.startswith("HP"):  # if xref start with HP as HP:HP:0000001
+            # xref = xref.split(":", 1)[1]
             g.add_edge(doc['_id'].upper(), xref.upper())
     return g
 
@@ -278,28 +278,6 @@ def get_collection_fields(collection):
     return fields
 
 
-def rename_hp_xref(disease):
-    """
-
-    :param disease:
-    :return:
-    """
-    docs = disease.find({'xref': {'$exists': True}})
-    for doc in docs:
-        if 'hp' not in doc['xref']:
-            continue
-        hpids = []
-        for x in doc['xref']['hp']:
-            hpid = x.split(":", 1)[1]
-            if int(hpid):
-                hpids.append(x)
-        # update the hp ids
-        disease.update_one(
-            {'_id': doc['_id']},
-            {'$set': {'xref.hp': hpids}},
-            upsert=True)
-
-
 def complete_map_doc(dismap):
     """
     complete the map doc of the mapping ids
@@ -452,42 +430,61 @@ def build_umls2umls(disease, umls2umls):
         umls2umls.insert_one(rel_doc)
 
 
-def build_did2umls(dis, did2umls):
+def build_did2umls(disease, did2umls, umls2umls):
     """
     build the disease id to umls id collection
     :param dis:
     :param did2umls:
     :return:
     """
-    for doc in dis.find({"_id": {'$regex': "^UMLS_CUI"}}):
-        # print("build_did2umls: id {}".format(doc['_id']))
+    for doc in disease.find({"_id": {'$regex': "^UMLS_CUI"}}):
+        print("build_did2umls: id {}".format(doc['_id']))
         if 'xref' not in doc:
             continue
         for x in dict2list(doc['xref']):
-            # HP:HP:0000001
-            if x.startswith("HP"):
-                hpid = x.split(":", 1)[1]
-                umls_cui = doc['_id']
-                did2umls.update_one({'_id': hpid}, {'$addToSet': {'umls_cui': umls_cui}}, upsert=True)
-                continue
             if x.split(':', 1)[0] in id_types:
                 umls_cui = doc['_id']
                 did2umls.update_one({'_id': x}, {'$addToSet': {'umls_cui': umls_cui}}, upsert=True)
 
-    # remove the duplication
-    remove_did2umls_duplication(did2umls)
+    # remove the duplication and use umls2umls relationships
+    update_did2umls(did2umls, umls2umls)
 
 
-def remove_did2umls_duplication(did2umls):
+def update_did2umls(did2umls, umls2umls):
     """
-    remove the did2umls collection umls cuis duplication
+        remove the did2umls collection umls cuis duplication
+        update the did2umls use the umls 2 umls relationships data
+        ref url: https://www.nlm.nih.gov/research/umls/knowledge_sources/metathesaurus/release/abbreviations.html#REL
     :param did2umls:
+    :param umls2umls:
     :return:
     """
-    # remove the duplication
+    # load umls2umls relationships
+    # init the umls to umls dict
+    '''
+    RL	the relationship is similar or "alike". the two concepts are similar or "alike".
+        In the current edition of the Metathesaurus, most relationships with this attribute are mappings provided by a source,
+        named in SAB and SL; hence concepts linked by this relationship may be synonymous, i.e. self-referential: CUI1 = CUI2.
+        In previous releases, some MeSH Supplementary Concept relationships were represented in this way.
+    SY	source asserted synonymy.
+    '''
+    synonym_fields = ['sy', 'rl']
+    umls2umls_dict = dict()
+    for doc in umls2umls.find({}):
+        umls_rels = []
+        for k, v in doc.items():
+            if k in synonym_fields:
+                umls_rels += v
+        umls2umls_dict[doc['_id']] = list(set(umls_rels))
+    print("load umls 2 umls success")
+
+    # update and remove the duplication
     for doc in did2umls.find({}):
         print("remove_did2umls_duplication: id {}".format(doc['_id']))
-        umls_cuis = list(set(doc['umls_cui']))
+        umls_cuis = []
+        for umls in doc['umls_cui']:
+            umls_cuis += umls2umls_dict[umls]
+        umls_cuis = list(set(umls_cuis))  # remove duplications
         did2umls.update_one({'_id': doc['_id']}, {'$set': {'umls_cui': umls_cuis}}, upsert=True)
 
 
@@ -540,9 +537,9 @@ def store_map_step2(did2umls, disease, dismap):
                     if type not in id_types:
                         continue
                     xref_id = x
-                    # hp ids
-                    if type == "HP":
-                        xref_id = x.split(':', 1)[1]
+                    # # hp ids
+                    # if type == "HP":
+                    # xref_id = x.split(':', 1)[1]
                     if type.lower() in doc:
                         doc[type.lower()].append(xref_id)
                     else:
@@ -664,8 +661,10 @@ def build_dis_map(client):
     """
     # the collection
     disease = client.biodis.disease
+    disease_all = client.biodis.disease_all
     dismap = client.biodis.dismap
     did2umls = client.biodis.did2umls
+    umls2umls = client.biodis.umls2umls
     dismap_all_step1 = client.biodis.dismap_step1
     dismap_all_step2 = client.biodis.dismap_step2
     dismap_all_step3 = client.biodis.dismap_step3
@@ -676,6 +675,7 @@ def build_dis_map(client):
     duplicate_collection(dismap, dismap_all_step1)
 
     # the second step, use the umls xref data
+    build_did2umls(disease_all, did2umls, umls2umls)
     store_map_step2(did2umls, disease, dismap)
     get_id_mapping_statics(dismap, step='step 2')
     duplicate_collection(dismap, dismap_all_step2)
@@ -739,7 +739,7 @@ if __name__ == "__main__":
     '''
     build id map
     '''
-    # build_dis_map(local_client)
+    build_dis_map(local_client)
 
     # clone the collection
     # duplicate_collection(bio_client.biodis.dismap_no_umls_bak, bio_client.biodis.dismap_no_umls)
@@ -750,10 +750,12 @@ if __name__ == "__main__":
     # duplicate_collection(bio_client.biodis.dismap__all_step2, bio_client.biodis.dismap)
 
     '''
-    build did 2 umls id dict
+    build diseaseid 2 umls id dict
     '''
-    # build_did2umls(bio_client.biodis.disease, bio_client.biodis.did2umls)
+    # build_did2umls(bio_client.biodis.disease_all, bio_client.biodis.did2umls)
     # remove_did2umls_duplication(bio_client.biodis.did2umls)
+    # build umls 2 umls
+    # build_umls2umls(bio_client.biodis.disease_all, bio_client.biodis.umls2umls)
 
     '''
     step 1
@@ -807,10 +809,5 @@ if __name__ == "__main__":
     '''
     # remove_error_map_doc(bio_client.biodis.dismap_no_umls, bio_client.biodis.disease)
     # remove_did2umls_duplication(bio_client.biodis.did2umls)
-
-
-
-    # build umls 2 umls
-    build_umls2umls(bio_client.biodis.disease_all, bio_client.biodis.umls2umls)
 
     print("success")

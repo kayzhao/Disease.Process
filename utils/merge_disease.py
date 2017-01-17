@@ -235,6 +235,54 @@ def process_doc_2_disease(docs, db):
     return d
 
 
+def update_hpxref_data(disease):
+    """
+    update the xref data
+    :param disease:
+    :return:
+    """
+    # docs = disease.find({
+    # 'xref': {'$exists': True},
+    # '_id': {'$regex': "^HP"}
+    # })
+    docs = disease.find({'xref': {'$exists': True}})
+    for doc in docs:
+        if len(doc['xref']) == 0:
+            print("remove xref id = {}".format(doc['_id']))
+            # remove the hp field
+            disease.update_one(
+                {'_id': doc['_id']},
+                {'$unset': {'xref': ""}},
+                upsert=True)
+            continue
+        if 'HP' not in doc['xref']:
+            continue
+        hpids = []
+        for x in doc['xref']['HP']:
+            print(doc['_id'], x)
+            if ':' not in x:
+                hpid = x
+            else:
+                hpid = x.split(":", 1)[1]
+            if hpid.isnumeric():
+                hpids.append(hpid)
+        print(hpids)
+        if len(hpids):
+            print("update xref.HP id = {}".format(doc['_id']))
+            # update the hp ids
+            disease.update_one(
+                {'_id': doc['_id']},
+                {'$set': {'xref.HP': hpids}},
+                upsert=True)
+        else:
+            print("remove xref.HP id = {}".format(doc['_id']))
+            # remove the hp field
+            disease.update_one(
+                {'_id': doc['_id']},
+                {'$unset': {'xref.HP': ""}},
+                upsert=True)
+
+
 if __name__ == "__main__":
     src_client = MongoClient('mongodb://kay123:kayzhao@192.168.1.110:27017/src_disease')
     bio_client = MongoClient('mongodb://kayzhao:kayzhao@192.168.1.110:27017/biodis')
