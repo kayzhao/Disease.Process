@@ -6,6 +6,7 @@ from collections import defaultdict
 from utils.common import dict2list
 from pymongo import MongoClient
 import collections
+import datetime
 
 id_types = [
     "UMLS_CUI", "HP", "DOID", "KEGG", "MESH", "OMIM", "ICD9CM",
@@ -208,7 +209,7 @@ def get_disease_data(all_disease_docs):
 
 
 def get_id_mapping_statics(dismap, step="step 1"):
-    print("----- {} --- dismap statistics ".format(step))
+    print("----- {} datetime : {}--- dismap statistics ".format(step, datetime.datetime.now()))
     d = dict()
     # init the dict
     for x in id_types:
@@ -237,15 +238,20 @@ def get_id_mapping_statics(dismap, step="step 1"):
     path = "/home/zkj/disease/mapping/dismap_info.txt"
     f = open(path, 'a', encoding='utf-8')
     f.write("\n\n----------------------  {}  ----------------------------\n\n".format(step))
+    no_statistic_types = ['OTHER', 'EFO']
     for k, v in collections.OrderedDict(sorted(d.items())).items():
         f.write('{}\t'.format(k))
 
         od_v = collections.OrderedDict(sorted(v.items()))
 
         for key in od_v.keys():
+            if key in no_statistic_types:
+                continue
             f.write('{}\t'.format(key.upper()))
         f.write('\n\t')
         for k1, v1 in od_v.items():
+            if k1 in no_statistic_types:
+                continue
             f.write('{}\t'.format(v1))
             # print("%s\t %d" % (k1, v1))
         f.write('\n')
@@ -584,7 +590,7 @@ def store_map_step2(did2umls, disease, disease_all, dismap):
     complete_map_doc(dismap)
 
 
-def store_map_step3(disease, disease_all, dismap):
+def store_map_step3_v1(disease, disease_all, dismap):
     """
         the third step, build the xref graph
     :param disease:
@@ -630,7 +636,7 @@ def store_map_step3_v2(disease, disease_all, dismap):
                 continue
             else
                 get_equiv_dtype_id() use xref graph
-                cutoff = 3
+                cutoff = max_cutoff
     :param disease:
     :param disease_all:
     :param dismap:
@@ -640,6 +646,8 @@ def store_map_step3_v2(disease, disease_all, dismap):
     xref_docs = disease_all.find({'xref': {'$exists': True}})
     g = build_did_graph(xref_docs)
     print("build id graph success")
+
+    max_cutoff = 10
 
     # update the mapping list
     map_docs = dismap.find({}, no_cursor_timeout=True)
@@ -655,9 +663,12 @@ def store_map_step3_v2(disease, disease_all, dismap):
                 continue
             # get ids form xref graph
             # ids = get_equiv_dtype_id(g, did, cutoff=3, dtype=x)
-            ids = get_equiv_dtype_id(g, did, cutoff=2, dtype=x)
-            if len(ids):
-                doc[x.lower()] = list(set(ids))
+            # ids = get_equiv_dtype_id(g, did, cutoff=2, dtype=x)
+            for i in range(1, max_cutoff):
+                ids = get_equiv_dtype_id(g, did, cutoff=i, dtype=x)
+                if len(ids):
+                    doc[x.lower()] = list(set(ids))
+                    break
         dismap.update_one({'_id': did}, {'$set': doc}, upsert=True)
 
     # remove error map doc
@@ -667,7 +678,11 @@ def store_map_step3_v2(disease, disease_all, dismap):
     complete_map_doc(dismap)
 
 
-def store_map_step4(dis_xref, dis_map):
+def store_map_step4():
+    """
+        name or synonym
+    :return:
+    """
     print("step 4")
 
 
@@ -694,25 +709,29 @@ def build_dis_map(client):
     dismap_all_step2 = client.biodis.dismap_step2
     dismap_all_step3 = client.biodis.dismap_step3
 
-    # the first step , get the xref data
-    # store_map_step1(disease, dismap)
-    # get_id_mapping_statics(dismap, step='step 1')
-    # duplicate_collection(dismap, dismap_all_step1)
-
-    # the second step, use the umls xref data
     '''
-    build did2umls
+        before build dismap,build the umls2umls and did2umls
     '''
     # build_umls2umls(disease_all,umls2umls)
     # build_did2umls(disease_all, did2umls, umls2umls)
-    # remove the duplication and use umls2umls relationships
-    update_did2umls_v2(did2umls, umls2umls)
+    # update_did2umls_v2(did2umls, umls2umls)
 
+    '''
+        the first step , get the xref data
+    '''
+    store_map_step1(disease, dismap)
+    get_id_mapping_statics(dismap, step='step 1')
+    duplicate_collection(dismap, dismap_all_step1)
+
+    '''
+        the second step, use the umls xref data
+    '''
     store_map_step2(did2umls, disease, disease_all, dismap)
     get_id_mapping_statics(dismap, step='step 2')
     duplicate_collection(dismap, dismap_all_step2)
-
-    # the third step, build the xref graph
+    '''
+        the third step, build the xref graph
+    '''
     # store_map_step3(disease, dismap)
     store_map_step3_v2(disease, disease_all, dismap)
     get_id_mapping_statics(dismap, step='step 3')
