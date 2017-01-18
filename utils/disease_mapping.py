@@ -237,7 +237,7 @@ def get_id_mapping_statics(dismap, step="step 1"):
     path = "D:/disease/mapping/dismap_info.txt"
     path = "/home/zkj/disease/mapping/dismap_info.txt"
     f = open(path, 'a', encoding='utf-8')
-    f.write("\n\n----------------------  {}  ----------------------------\n\n".format(step))
+    f.write("\n\n----------------------  {} {} ----------------------------\n\n".format(step, datetime.datetime.now()))
     no_statistic_types = ['OTHER', 'EFO']
     for k, v in collections.OrderedDict(sorted(d.items())).items():
         f.write('{}\t'.format(k))
@@ -440,7 +440,9 @@ def update_did2umls_v1(did2umls, umls2umls):
         version 1 (too much memory to use)
         remove the did2umls collection umls cuis duplication
         update the did2umls use the umls 2 umls relationships data
-        ref url: https://www.nlm.nih.gov/research/umls/knowledge_sources/metathesaurus/release/abbreviations.html#REL
+        ref url:
+        https://www.nlm.nih.gov/research/umls/knowledge_sources/metathesaurus/release/abbreviations.html#REL
+        https://ncim.nci.nih.gov/ncimbrowser/pages/rela_help_info.jsf
     :param did2umls:
     :param umls2umls:
     :return:
@@ -480,9 +482,12 @@ def update_did2umls_v1(did2umls, umls2umls):
 
 def update_did2umls_v2(did2umls, umls2umls):
     """
+        version 1 (too much memory to use)
         remove the did2umls collection umls cuis duplication
         update the did2umls use the umls 2 umls relationships data
-        ref url: https://www.nlm.nih.gov/research/umls/knowledge_sources/metathesaurus/release/abbreviations.html#REL
+        ref url:
+        https://www.nlm.nih.gov/research/umls/knowledge_sources/metathesaurus/release/abbreviations.html#REL
+        https://ncim.nci.nih.gov/ncimbrowser/pages/rela_help_info.jsf
     :param did2umls:
     :param umls2umls:
     :return:
@@ -647,7 +652,7 @@ def store_map_step3_v2(disease, disease_all, dismap):
     g = build_did_graph(xref_docs)
     print("build id graph success")
 
-    max_cutoff = 10
+    max_cutoff = 6
 
     # update the mapping list
     map_docs = dismap.find({}, no_cursor_timeout=True)
