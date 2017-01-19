@@ -8,9 +8,12 @@ from pymongo import MongoClient
 import collections
 import datetime
 
+# id_types = [
+# "UMLS_CUI", "HP", "DOID", "KEGG", "MESH", "OMIM", "ICD9CM",
+# "ICD10CM", "EFO", "ORPHANET", "NCI", "RXNORM", "SNOMEDCT", "OTHER"
+# ]
 id_types = [
-    "UMLS_CUI", "HP", "DOID", "KEGG", "MESH", "OMIM", "ICD9CM",
-    "ICD10CM", "EFO", "ORPHANET", "NCI", "RXNORM", "SNOMEDCT", "OTHER"
+    "UMLS_CUI", "HP", "DOID", "KEGG", "MESH", "OMIM", "ICD9CM", "ICD10CM", "ORPHANET", "OTHER"
 ]
 
 xref_types = [
@@ -41,7 +44,9 @@ def get_ids_info(all_diseases_docs):
         print("get_ids_info: len of all ids {}".format(len(all_ids)))
 
     # write the static to file
-    f = open("D:/disease/mapping/disease_ids_info.txt", 'a', encoding='utf-8')
+    path = "D:/disease/mapping/disease_ids_info.txt"
+    path = '/home/zkj/disease/mapping/disease_ids_info.txt'
+    f = open(path, 'a', encoding='utf-8')
     f.write("the db disease ids statistics \n ")
     for k, v in Counter([x.split(":", 1)[0] for x in all_ids]).items():
         f.write('{}\t{}\n'.format(k, v))
@@ -348,6 +353,49 @@ def remove_error_map_doc(dismap, disease):
         dismap.update_one({"_id": did}, {"$set": {"kegg": kegg}})
 
 
+def init_map_ids(disease, did2umls, dismap):
+    """
+        init the dismap disease id list
+    :param disease:
+    :param did2umls:
+    :param dismap:
+    :return:
+    """
+    print("init_map_ids")
+    all_ids = []
+    # add disease list
+    docs = disease.find({})
+    for doc in docs:
+        did = doc['_id']
+        did_type = did.split(':', 1)[0]
+        if did_type in id_types:
+            all_ids.append(did)
+
+    print(len(all_ids))
+    docs = did2umls.find({})
+    for doc in docs:
+        did = doc['_id']
+        did_type = did.split(':', 1)[0]
+        if did_type in id_types:
+            if did_type == 'MESH':
+                # and not did.startswith(('MESH:C', 'MESH:D', 'MESH:F123'))
+                continue
+            if did_type == 'OMIM' and len(did) > 11:
+                continue
+            all_ids.append(did)
+
+    # remove the duplicate
+    all_ids = list(set(all_ids))
+    all_ids_docs = []
+    for x in sorted(all_ids):
+        all_ids_docs.append({
+            '_id': x
+        })
+
+    # insert the disease map
+    dismap.insert_many(all_ids_docs)
+
+
 def store_map_step1(disease, dismap):
     """
     store the xref map to build the init id map
@@ -379,7 +427,7 @@ def store_map_step1(disease, dismap):
 
         # get rid of null
         one_doc = {k: v for k, v in d.items() if len(v) != 0}
-        dismap.insert_one(one_doc)
+        dismap.update_one({'_id': doc['_id']}, {"$set": one_doc}, upsert=True)
 
     # remove error map doc
     print("remove error map doc")
@@ -571,6 +619,10 @@ def store_map_step2(did2umls, disease, disease_all, dismap):
                     type = x.split(':', 1)[0]  # get the id type, such as: DOID
                     if type not in id_types:
                         continue
+
+                    if type == 'OMIM' and len(x) > 11:
+                        continue
+
                     xref_id = x
                     # # hp ids
                     # if type == "HP":
@@ -672,7 +724,12 @@ def store_map_step3_v2(disease, disease_all, dismap):
             for i in range(1, max_cutoff):
                 ids = get_equiv_dtype_id(g, did, cutoff=i, dtype=x)
                 if len(ids):
-                    doc[x.lower()] = list(set(ids))
+                    temp_ids = []
+                    for x in ids:
+                        if type == 'OMIM' and len(x) > 11:
+                            continue
+                        temp_ids.append(x)
+                    doc[x.lower()] = list(set(temp_ids))
                     break
         dismap.update_one({'_id': did}, {'$set': doc}, upsert=True)
 
@@ -720,6 +777,7 @@ def build_dis_map(client):
     # build_umls2umls(disease_all,umls2umls)
     # build_did2umls(disease_all, did2umls, umls2umls)
     # update_did2umls_v2(did2umls, umls2umls)
+    # init_map_ids(disease,did2umls,dismap)
 
     '''
         the first step , get the xref data
@@ -850,16 +908,11 @@ if __name__ == "__main__":
 
 
     # step static
-    # client = MongoClient('mongodb://kayzhao:kayzhao@192.168.1.113:27017/biodis')
-    # dismap_step1 = client.biodis.dismap_step1
-    # dismap_step2 = client.biodis.dismap_step2
-    # dismap_step3 = client.biodis.dismap_step3
-    # disease = client.biodis.disease
-    # get_id_mapping_statics(dismap_step1, step='step 1')
-    # get_id_mapping_statics(dismap_step2, step='step 2')
-    # get_id_mapping_statics(dismap_step3, step='step 3')
-    # remove_error_map_doc(dismap_step1,disease)
-    # get_id_mapping_statics(dismap_step1, step='step 1')
+    # init_map_ids(
+    #     bio_client.biodis.disease,
+    #     bio_client.biodis.did2umls,
+    #     bio_client.biodis.dismap
+    # )
     '''
     remove error
     '''
