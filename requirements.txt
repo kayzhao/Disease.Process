@@ -1,4 +1,6 @@
+#
 #numpy-1.11.3+mkl
+#numpy=1.11.1
 decorator==4.0.10
 isodate==0.5.4
 networkx==1.11
@@ -15,6 +17,5 @@ wget==3.2
 typing==3.5.2.2
 pyparsing==2.1.8
 pytest==3.0.4
-numpy-mkl
 scipy
 gensim
