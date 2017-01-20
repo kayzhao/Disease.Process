@@ -853,7 +853,7 @@ if __name__ == "__main__":
     '''
     build id map
     '''
-    build_dis_map(local_client)
+    # build_dis_map(local_client)
 
     # clone the collection
     # duplicate_collection(bio_client.biodis.dismap_no_umls_bak, bio_client.biodis.dismap_no_umls)

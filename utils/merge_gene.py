@@ -116,9 +116,34 @@ def process_omim_gene(docs, db):
     db.insert_many(genes_d)
 
 
+def process_did2umls(docs, db, dismap):
+    print("omim disease")
+    for doc in docs:
+        print('process_did2umls id = {}'.format(doc['_id']))
+        if "disease_id" in doc:
+            map_doc = dismap.find_one({'_id': doc['disease_id']})
+            if map_doc is not None and 'umls_cui' in map_doc:
+                umls_cui = map_doc['umls_cui']
+                db.update_one({'_id': doc['_id']}, {'$set': {'map_id': umls_cui}}, upsert=True)
+
+
+def process_did2umls_(docs, dismap):
+    print("update mapping id in gene-disease")
+    no_umls_list = []
+    for doc in docs:
+        print('process_did2umls id = {}'.format(doc['_id']))
+        if "disease_id" in doc:
+            map_doc = dismap.find_one({'_id': doc['disease_id']})
+            if map_doc is None or 'umls_cui' not in map_doc:
+                no_umls_list.append(doc["disease_id"])
+        else:
+            no_umls_list.append(doc["disease_name"])
+    print(no_umls_list)
+
+
 if __name__ == "__main__":
     src_client = MongoClient('mongodb://kay123:kayzhao@192.168.1.110:27017/src_disease')
-    bio_client = MongoClient('mongodb://kayzhao:kayzhao@192.168.1.110:27017/biodis')
+    bio_client = MongoClient('mongodb://kayzhao:kayzhao@192.168.1.113:27017/biodis')
 
     # # Disgenet genes
     # process_disgenet_gene(file_path_gene_disease, bio_client.biodis.gene)
@@ -127,9 +152,10 @@ if __name__ == "__main__":
     # process_kegg_gene(src_client.src_disease.kegg.find({}), bio_client.biodis.gene)
 
     # omim gene
-    process_omim_gene(src_client.src_disease.omim.find({}), bio_client.biodis.gene)
+    # process_omim_gene(src_client.src_disease.omim.find({}), bio_client.biodis.gene)
 
     # format the gene data
     # format_ctd_gene_data(bio_client.biodis.gene.find({}), bio_client.biodis.gene)
 
+    process_did2umls_(bio_client.biodis.gene.find({}),bio_client.biodis.dismap)
     print("success")
