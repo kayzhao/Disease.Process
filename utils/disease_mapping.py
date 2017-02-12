@@ -722,7 +722,7 @@ def store_map_step3_v2(disease, disease_all, dismap):
             # ids = get_equiv_dtype_id(g, did, cutoff=3, dtype=x)
             # ids = get_equiv_dtype_id(g, did, cutoff=2, dtype=x)
             for i in range(1, max_cutoff):
-                ids = get_equiv_dtype_id(g, did, cutoff=i, dtype=x)
+                ids = get_equiv_dtype_id(g, did, cutoff=i, dtype=xtype)
                 if len(ids):
                     temp_ids = []
                     for x in ids:
