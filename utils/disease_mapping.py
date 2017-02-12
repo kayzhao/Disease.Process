@@ -712,11 +712,11 @@ def store_map_step3_v2(disease, disease_all, dismap):
         did = doc['_id']
         did_type = did.split(":", 1)[0]
         # print("store_map_step3: id {}".format(doc['_id']))
-        for x in id_types:
-            if x == 'OTHER' or x == did_type:
+        for xtype in id_types:
+            if xtype == 'OTHER' or xtype.lower() == did_type:
                 continue
             # has mapping ,skip this type
-            if x.lower() in doc and len(doc[x.lower()]):
+            if xtype.lower() in doc and len(doc[xtype.lower()]):
                 continue
             # get ids form xref graph
             # ids = get_equiv_dtype_id(g, did, cutoff=3, dtype=x)
@@ -726,10 +726,10 @@ def store_map_step3_v2(disease, disease_all, dismap):
                 if len(ids):
                     temp_ids = []
                     for x in ids:
-                        if type == 'OMIM' and len(x) > 11:
+                        if x.startswith('OMIM') and len(x) > 11:
                             continue
                         temp_ids.append(x)
-                    doc[x.lower()] = list(set(temp_ids))
+                    doc[xtype.lower()] = list(set(temp_ids))
                     break
         dismap.update_one({'_id': did}, {'$set': doc}, upsert=True)
 
@@ -919,4 +919,15 @@ if __name__ == "__main__":
     # remove_error_map_doc(bio_client.biodis.dismap_no_umls, bio_client.biodis.disease)
     # remove_did2umls_duplication(bio_client.biodis.did2umls)
 
+
+    client = local_client
+    disease = client.biodis.disease
+    disease_all = client.biodis.disease_all
+    dismap = client.biodis.dismap
+    dismap_all_step3 = client.biodis.dismap_step3
+    # duplicate_collection(client.biodis.dismap_step2,client.biodis.dismap)
+    # store_map_step3(disease, dismap)
+    store_map_step3_v2(disease, disease_all, dismap)
+    get_id_mapping_statics(dismap, step='step 3')
+    duplicate_collection(dismap, dismap_all_step3)
     print("success")
