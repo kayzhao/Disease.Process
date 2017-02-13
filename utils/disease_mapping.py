@@ -319,38 +319,39 @@ def complete_map_doc(dismap):
                     dismap.update_one({'_id': x}, {'$addToSet': {did_type: did}}, upsert=True)
 
 
-def remove_error_map_doc(dismap, disease):
+def remove_error_map_doc(dismap, disease, error_type="KEGG"):
     """
     remove the error map_doc
     :param dismap:
     :param disease:
+    :param error_type
     :return:
     """
-    print('remove the _id "KEGG:" not exists')
-    kegg_docs = disease.find({"_id": {'$regex': "^KEGG"}})
-    kegg_ids = []
-    for doc in kegg_docs:
-        kegg_ids.append(doc['_id'])
+    print('remove the _id "error_type:" not exists')
+    docs = disease.find({"_id": {'$regex': "^" + error_type + ""}})
+    ids = []
+    for doc in docs:
+        ids.append(doc['_id'])
 
     # remove the _id "KEGG:" not exists
-    docs = dismap.find({"_id": {'$regex': "^KEGG"}})
-    for doc in docs:
+    map_docs = dismap.find({"_id": {'$regex': "^" + error_type + ""}})
+    for doc in map_docs:
         did = doc['_id']
-        # print("remove_error_map_doc kegg id : id {}".format(did))
-        if did not in kegg_ids:
+        # print("remove_error_map_doc error_type id : id {}".format(did))
+        if did not in ids:
             dismap.remove({"_id": did})
 
-    print('remove the kegg field "KEGG:" not exists')
+    print('remove the field error_type:" not exists')
     # remove the kegg field "KEGG:" not exists
-    docs = dismap.find({"kegg": {'$exists': True}})
-    for doc in docs:
+    map_docs = dismap.find({error_type.lower(): {'$exists': True}})
+    for doc in map_docs:
         did = doc['_id']
-        # print("remove_error_map_doc kegg fields: id {}".format(did))
-        kegg = []
-        for x in doc['kegg']:
-            if x in kegg_ids:
-                kegg.append(x)
-        dismap.update_one({"_id": did}, {"$set": {"kegg": kegg}})
+        # print("remove_error_map_doc error_type fields: id {}".format(did))
+        l = []
+        for x in doc['error_type.lower()']:
+            if x in ids:
+                l.append(x)
+        dismap.update_one({"_id": did}, {"$set": {error_type.lower(): l}})
 
 
 def init_map_ids(disease, did2umls, dismap):
@@ -704,7 +705,7 @@ def store_map_step3_v2(disease, disease_all, dismap):
     g = build_did_graph(xref_docs)
     print("build id graph success")
 
-    max_cutoff = 6
+    max_cutoff = 4
 
     # update the mapping list
     map_docs = dismap.find({}, no_cursor_timeout=True)
@@ -735,6 +736,8 @@ def store_map_step3_v2(disease, disease_all, dismap):
 
     # remove error map doc
     remove_error_map_doc(dismap, disease)
+    remove_error_map_doc(dismap, disease,error_type="OMIM")
+    remove_error_map_doc(dismap, disease, error_type="MESH")
     # complete the doc
     print("complete the doc")
     complete_map_doc(dismap)
@@ -920,7 +923,7 @@ if __name__ == "__main__":
     # remove_did2umls_duplication(bio_client.biodis.did2umls)
 
 
-    client = local_client
+    client = bio_client
     disease = client.biodis.disease
     disease_all = client.biodis.disease_all
     dismap = client.biodis.dismap
@@ -930,4 +933,7 @@ if __name__ == "__main__":
     store_map_step3_v2(disease, disease_all, dismap)
     get_id_mapping_statics(dismap, step='step 3')
     duplicate_collection(dismap, dismap_all_step3)
+    # for doc in dismap.find({"_id": {'$regex': "^OMIM"}}):
+    #     if disease.find_one({'_id': doc['_id']}) is None:
+    #         print(doc['_id'])
     print("success")
