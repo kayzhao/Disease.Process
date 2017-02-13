@@ -318,6 +318,9 @@ def complete_map_doc(dismap):
                 if type not in id_types:
                     continue
                 update_doc = dismap.find_one({'_id': x})
+                if update_doc is None:
+                    dismap.update_one({'_id': x}, {'$addToSet': {did_type: did}}, upsert=True)
+                    continue
                 # the did_type is exists
                 if did_type in update_doc and len(update_doc[did_type]):
                     continue
@@ -707,7 +710,8 @@ def store_map_step3_v2(disease, disease_all, dismap):
     :return:
     """
     print('step 3')
-    xref_docs = disease_all.find({'xref': {'$exists': True}})
+    xref_docs = disease.find({'xref': {'$exists': True}})
+    # xref_docs = disease_all.find({'xref': {'$exists': True}})
     g = build_did_graph(xref_docs)
     print("build id graph success")
 
@@ -745,6 +749,7 @@ def store_map_step3_v2(disease, disease_all, dismap):
     remove_error_map_doc(dismap, disease)
     remove_error_map_doc(dismap, disease,error_type="OMIM")
     remove_error_map_doc(dismap, disease, error_type="MESH")
+
     # complete the doc
     print("complete the doc")
     complete_map_doc(dismap)
