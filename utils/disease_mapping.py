@@ -307,16 +307,21 @@ def complete_map_doc(dismap):
         did_type = did.split(':', 1)[0].lower()
         # print("complete_map_doc : id {}".format(did))
         for k, v in doc.items():
-            if k == 'other':
+            if k == 'other' or k.upper == did_type:
                 continue
-            if k.upper() in id_types and len(v) > 0:
-                v = list(set(v))  # remove the duplication
-                for x in v:
-                    # avoid the error type id
-                    type = x.split(':', 1)[0]
-                    if type not in id_types:
-                        continue
-                    dismap.update_one({'_id': x}, {'$addToSet': {did_type: did}}, upsert=True)
+            if k.upper() not in id_types or len(v) == 0:
+                continue
+            v = list(set(v))  # remove the duplication
+            for x in v:
+                # avoid the error type id
+                type = x.split(':', 1)[0]
+                if type not in id_types:
+                    continue
+                update_doc = dismap.find_one({'_id': x})
+                # the did_type is exists
+                if did_type in update_doc and len(update_doc[did_type]):
+                    continue
+                dismap.update_one({'_id': x}, {'$addToSet': {did_type: did}}, upsert=True)
 
 
 def remove_error_map_doc(dismap, disease, error_type="KEGG"):
@@ -351,7 +356,8 @@ def remove_error_map_doc(dismap, disease, error_type="KEGG"):
         for x in doc[error_type.lower()]:
             if x in ids:
                 l.append(x)
-        dismap.update_one({"_id": did}, {"$set": {error_type.lower(): l}})
+        if len(l):
+            dismap.update_one({"_id": did}, {"$set": {error_type.lower(): l}})
 
 
 def init_map_ids(disease, did2umls, dismap):
