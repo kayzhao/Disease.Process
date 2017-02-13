@@ -319,7 +319,6 @@ def complete_map_doc(dismap):
                     continue
                 update_doc = dismap.find_one({'_id': x})
                 if update_doc is None:
-                    dismap.update_one({'_id': x}, {'$addToSet': {did_type: did}}, upsert=True)
                     continue
                 # the did_type is exists
                 if did_type in update_doc and len(update_doc[did_type]):
@@ -724,7 +723,7 @@ def store_map_step3_v2(disease, disease_all, dismap):
         did_type = did.split(":", 1)[0]
         # print("store_map_step3: id {}".format(doc['_id']))
         for xtype in id_types:
-            if xtype == 'OTHER' or xtype.lower() == did_type:
+            if xtype == 'OTHER' or xtype == did_type:
                 continue
             # has mapping ,skip this type
             if xtype.lower() in doc and len(doc[xtype.lower()]):
@@ -940,7 +939,7 @@ if __name__ == "__main__":
     disease_all = client.biodis.disease_all
     dismap = client.biodis.dismap
     dismap_all_step3 = client.biodis.dismap_step3
-    duplicate_collection(client.biodis.dismap_step2,client.biodis.dismap)
+    # duplicate_collection(client.biodis.dismap_step2,client.biodis.dismap)
     # store_map_step3(disease, dismap)
     store_map_step3_v2(disease, disease_all, dismap)
     get_id_mapping_statics(dismap, step='step 3')
