@@ -348,7 +348,7 @@ def remove_error_map_doc(dismap, disease, error_type="KEGG"):
         did = doc['_id']
         # print("remove_error_map_doc error_type fields: id {}".format(did))
         l = []
-        for x in doc['error_type.lower()']:
+        for x in doc[error_type.lower()]:
             if x in ids:
                 l.append(x)
         dismap.update_one({"_id": did}, {"$set": {error_type.lower(): l}})
@@ -730,7 +730,8 @@ def store_map_step3_v2(disease, disease_all, dismap):
                         if x.startswith('OMIM') and len(x) > 11:
                             continue
                         temp_ids.append(x)
-                    doc[xtype.lower()] = list(set(temp_ids))
+                    if len(temp_ids):
+                        doc[xtype.lower()] = list(set(temp_ids))
                     break
         dismap.update_one({'_id': did}, {'$set': doc}, upsert=True)
 
@@ -928,7 +929,7 @@ if __name__ == "__main__":
     disease_all = client.biodis.disease_all
     dismap = client.biodis.dismap
     dismap_all_step3 = client.biodis.dismap_step3
-    # duplicate_collection(client.biodis.dismap_step2,client.biodis.dismap)
+    duplicate_collection(client.biodis.dismap_step2,client.biodis.dismap)
     # store_map_step3(disease, dismap)
     store_map_step3_v2(disease, disease_all, dismap)
     get_id_mapping_statics(dismap, step='step 3')
