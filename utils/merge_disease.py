@@ -2,6 +2,8 @@ __author__ = 'kayzhao'
 
 from utils.common import dict2list, list2dict
 from pymongo import MongoClient
+from utils.disease_mapping import build_did_graph, get_equiv_dtype_id
+import tqdm
 
 
 def process_do(docs, db):
@@ -283,38 +285,89 @@ def update_hpxref_data(disease):
                 upsert=True)
 
 
+def init_merge_disease(client):
+    dismap = client.biodis.dismap
+    umls_disease = client.biodis.umls_disease
+    disease_all = client.biodis.disease_all
+    docs = dismap.find({"_id": {'$regex': "^UMLS"}})
+    for doc in docs:
+        db_d = disease_all.find_one({"_id": doc['_id']})
+        if db_d:
+            print(doc["_id"])
+            if 'name' not in db_d:
+                synonyms = db_d['synonym']
+                for x in synonyms:
+                    if "(ENG)" in x:
+                        db_d['name'] = x[0:x.find("(ENG)")]
+                        break
+                print("name = " + db_d['name'])
+            if 'relationships' in db_d:
+                del db_d['relationships']
+            if 'ruis' in db_d:
+                del db_d['ruis']
+            if 'drugs' in db_d:
+                del db_d['drugs']
+            if 'genes' in db_d:
+                del db_d['genes']
+            if 'snps' in db_d:
+                del db_d['snps']
+            umls_disease.update_one({'_id': db_d['_id']}, {'$set': db_d}, upsert=True)
+
+
+def merge(client):
+    dismap = client.biodis.dismap
+    umls_disease = client.biodis.umls_disease
+    disease_all = client.biodis.disease_all
+    disease = client.biodis.disease
+    # g = build_did_graph()
+    docs = disease.find()
+    for doc in docs:
+        print(doc['_id'])
+        type = doc['_id'].split(":", 1)[0]
+        if type.startswith("UMLS"):
+            continue
+        map_doc = dismap.find_one({"_id": doc['_id'], 'umls_cui': {'$exists': True}})
+        if map_doc is not None:
+            for umls_id in map_doc['umls_cui']:
+                umls_disease.update_one({'_id': umls_id}, {'$push': {type: doc}}, upsert=True)
+        else:
+            umls_disease.insert_one(doc)
+
+
 if __name__ == "__main__":
     src_client = MongoClient('mongodb://kay123:kayzhao@192.168.1.110:27017/src_disease')
-    bio_client = MongoClient('mongodb://kayzhao:kayzhao@192.168.1.110:27017/biodis')
+    bio_client = MongoClient('mongodb://kayzhao:kayzhao@192.168.1.113:27017/biodis')
 
-    print("do")
-    process_do(src_client.src_disease.do.find({}), bio_client.biodis.do)
-
-    print("efo")
-    process_efo(src_client.src_disease.efo.find({}), bio_client.biodis.do)
-
-    print("orphanet")
-    process_orphanet(src_client.src_disease.orphanet.find({}), bio_client.biodis.do)
-
-    print("kegg")
-    process_kegg(src_client.src_disease.kegg.find({}), bio_client.biodis.disease_no_umls)
-
-    print("hpo")
-    process_kegg(src_client.src_disease.hpo.find({}), bio_client.biodis.do)
-
-    print("ndfrt")
-    process_nfdrt(src_client.src_disease.ndfrt.find({}), bio_client.biodis.do)
-
-    print("mesh")
-    process_mesh(src_client.src_disease.mesh.find({}), bio_client.biodis.do)
-
-    print("omim")
-    process_omim(src_client.src_disease.omim.find({}), bio_client.biodis.do)
-
-    print("merge all to disease")
-    process_omim(bio_client.biodis.disease_no_umls.find({}), bio_client.biodis.do)
+    # print("do")
+    # process_do(src_client.src_disease.do.find({}), bio_client.biodis.do)
+    #
+    # print("efo")
+    # process_efo(src_client.src_disease.efo.find({}), bio_client.biodis.do)
+    #
+    # print("orphanet")
+    # process_orphanet(src_client.src_disease.orphanet.find({}), bio_client.biodis.do)
+    #
+    # print("kegg")
+    # process_kegg(src_client.src_disease.kegg.find({}), bio_client.biodis.disease_no_umls)
+    #
+    # print("hpo")
+    # process_kegg(src_client.src_disease.hpo.find({}), bio_client.biodis.do)
+    #
+    # print("ndfrt")
+    # process_nfdrt(src_client.src_disease.ndfrt.find({}), bio_client.biodis.do)
+    #
+    # print("mesh")
+    # process_mesh(src_client.src_disease.mesh.find({}), bio_client.biodis.do)
+    #
+    # print("omim")
+    # process_omim(src_client.src_disease.omim.find({}), bio_client.biodis.do)
+    #
+    # print("merge all to disease")
+    # process_doc_2_disease(bio_client.biodis.disease_no_umls.find({}), bio_client.biodis.do)
     # process_doc_2_disease(
     # bio_client.biodis.disease_no_umls.find({"_id": {'$regex': "^KEGG"}}),
     # bio_client.biodis.disease)
 
+    # init_merge_disease(bio_client)
+    merge(bio_client)
     print("success")

@@ -141,6 +141,27 @@ def process_did2umls_(docs, dismap):
     print(no_umls_list)
 
 
+def add_umls_cui(client):
+    gene = client.biodis.gene
+    dismap = client.biodis.dismap
+    did2umls = client.biodis.did2umls
+
+    gene_docs = gene.find({}, no_cursor_timeout=True)
+    for doc in gene_docs:
+        new_doc = doc
+        if "disease_id" in doc:
+            del new_doc['_id']
+            if doc['disease_id'].startswith("UMLS_CUI"):
+                new_doc['umls_cui'] = doc['disease_id']
+                gene.insert_one(new_doc)
+            else:
+                map_doc = dismap.find_one({'_id': doc['disease_id']})
+                if map_doc is not None and 'umls_cui' in map_doc:
+                    for x in map_doc['umls_cui']:
+                        new_doc['umls_cui'] = x
+                        gene.insert_one(new_doc)
+                    gene.delete_one({"_id":doc['_id']})
+
 if __name__ == "__main__":
     src_client = MongoClient('mongodb://kay123:kayzhao@192.168.1.110:27017/src_disease')
     bio_client = MongoClient('mongodb://kayzhao:kayzhao@192.168.1.113:27017/biodis')
