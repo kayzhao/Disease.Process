@@ -314,6 +314,39 @@ def init_merge_disease(client):
             umls_disease.update_one({'_id': db_d['_id']}, {'$set': db_d}, upsert=True)
 
 
+def init_association_disease(client):
+    umls_disease = client.biodis.umls_disease
+    disease_all = client.biodis.disease_all
+    file_names = ['disease_chemical.txt', 'disease_gene.txt', 'disease_drug.txt', 'disease_snp.txt', 'disease_go.txt']
+    basePath ="D:/disease/association/"
+    for file in file_names:
+        dpath = basePath + file
+        fd = open(dpath, 'r', encoding='utf-8')
+        print(dpath)
+        for x in fd.readlines():
+            x = x.strip('\n')
+            db_d = disease_all.find_one({"_id": x})
+            if db_d:
+                if 'name' not in db_d and 'synonym' in db_d:
+                    synonyms = db_d['synonym']
+                    for x in synonyms:
+                        if "(ENG)" in x:
+                            db_d['name'] = x[0:x.find("(ENG)")]
+                            break
+                    # print("name = " + db_d['name'])
+                if 'relationships' in db_d:
+                    del db_d['relationships']
+                if 'ruis' in db_d:
+                    del db_d['ruis']
+                if 'drugs' in db_d:
+                    del db_d['drugs']
+                if 'genes' in db_d:
+                    del db_d['genes']
+                if 'snps' in db_d:
+                    del db_d['snps']
+                umls_disease.update_one({'_id': db_d['_id']}, {'$set': db_d}, upsert=True)
+
+
 def merge(client):
     dismap = client.biodis.dismap
     umls_disease = client.biodis.umls_disease
@@ -369,5 +402,6 @@ if __name__ == "__main__":
     # bio_client.biodis.disease)
 
     # init_merge_disease(bio_client)
-    merge(bio_client)
+    init_association_disease(bio_client)
+    # merge(bio_client)
     print("success")
