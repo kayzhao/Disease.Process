@@ -3,6 +3,7 @@ __author__ = 'kayzhao'
 from pymongo import MongoClient
 import pandas as pd
 from databuild.disgenet import *
+from databuild.disconnect import *
 
 
 def format_ctd_gene_data(docs, collection):
@@ -66,6 +67,20 @@ def process_disgenet_gene(file_path_gene_disease, db):
     db.insert_many(d)
 
 
+def process_disconnect_gene(file_path_gene_disease, db):
+    columns = ['concept_id', 'disease_name', 'type', 'gene_name']
+    df = pd.read_csv(file_path_gene_disease, sep=',', comment='#', names =columns)
+    d = []
+    records = df.to_dict(orient='records')
+    records = [{k: v for k, v in record.items()} for record in records]
+    for s in records:
+        s['source'] = 'DiseaseConnect'
+        print(s)
+        d.append(s)
+    # insert
+    db.insert_many(d)
+
+
 def process_kegg_gene(docs, db):
     print("kegg disease")
     genes_d = []
@@ -75,10 +90,10 @@ def process_kegg_gene(docs, db):
             for x in doc['genes']:
                 dic = dict()
                 dic['disease_id'] = doc['_id']
-                dic['gene_name'] = x['name']
+                dic['gene_name'] = x['gene_name']
                 dic['source'] = "(KEGG) Kyoto Encyclopedia of Genes and Genomes"
                 if 'ref' in x:
-                    dic['gene_ref'] = x['ref']
+                    dic['gene_ref'] = x['gene_ref']
                 dic['type'] = 'Gene'
                 genes_d.append(dic)
 
@@ -86,10 +101,10 @@ def process_kegg_gene(docs, db):
             for x in doc['markers']:
                 dic = dict()
                 dic['disease_id'] = doc['_id']
-                dic['gene_name'] = x['name']
+                dic['gene_name'] = x['gene_name']
                 dic['source'] = "(KEGG) Kyoto Encyclopedia of Genes and Genomes"
                 if 'ref' in x:
-                    dic['gene_ref'] = x['ref']
+                    dic['gene_ref'] = x['gene_ref']
                 dic['type'] = 'Marker'
                 genes_d.append(dic)
     # insert
@@ -169,7 +184,7 @@ def write_disease_ids(client):
                 else:
                     map_doc = dismap.find_one({'_id': doc['disease_id']})
                     if map_doc is not None and 'umls_cui' in map_doc:
-                        f.write('{}\t{}\n'.format(doc['disease_id'],map_doc['umls_cui']))
+                        f.write('{}\t{}\n'.format(doc['disease_id'], map_doc['umls_cui']))
                         umls_s.update(map_doc['umls_cui'])
                     else:
                         f.write('{}\n'.format(doc['disease_id']))
@@ -201,10 +216,11 @@ def add_umls_cui(client):
                     for x in map_doc['umls_cui']:
                         new_doc['umls_cui'] = x
                         gene.insert_one(new_doc)
-                    gene.delete_one({"_id":doc['_id']})
+                    gene.delete_one({"_id": doc['_id']})
+
 
 if __name__ == "__main__":
-    src_client = MongoClient('mongodb://kay123:kayzhao@192.168.1.110:27017/src_disease')
+    src_client = MongoClient('mongodb://192.168.1.113:27017/src_disease')
     bio_client = MongoClient('mongodb://kayzhao:kayzhao@192.168.1.113:27017/biodis')
 
     # # Disgenet genes
@@ -216,9 +232,12 @@ if __name__ == "__main__":
     # omim gene
     # process_omim_gene(src_client.src_disease.omim.find({}), bio_client.biodis.gene)
 
+    # DiseaseConnect genes
+    process_disconnect_gene(file_disconnect_gene_disease, bio_client.biodis.gene)
+
     # format the gene data
     # format_ctd_gene_data(bio_client.biodis.gene.find({}), bio_client.biodis.gene)
 
     # process_did2umls_(bio_client.biodis.gene.find({}),bio_client.biodis.dismap)
-    write_disease_ids(bio_client)
+    # write_disease_ids(bio_client)
     print("success")

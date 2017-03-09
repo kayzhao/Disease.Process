@@ -39,8 +39,9 @@ if __name__ == "__main__":
     bio_client = MongoClient('mongodb://kayzhao:kayzhao@192.168.1.113:27017/biodis')
     local_client = MongoClient('mongodb://kayzhao:kayzhao@127.0.0.1:27017/biodis')
 
-    collections = ['go', 'gene', 'drug', 'chemical']
+    # collections = ['go', 'gene', 'drug', 'chemical']
+    collections = ['drug', 'chemical']
     for x in collections:
         print('collection = ' + x)
-        add_umls_cui(local_client, local_client.biodis[x])
+        add_umls_cui(bio_client, bio_client.biodis[x])
     print("success")

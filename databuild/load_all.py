@@ -21,20 +21,22 @@ def parse_all():
     from databuild.ndfrt import ndfrt_parser
     from databuild.omim import omim_parser
     from databuild.kegg import kegg_parser
+    from databuild.nci import nci_parser
     from databuild.efo import efo_parser
     from databuild.umls import umls_parser
     from databuild.pydb import pydb_parser
 
     # the client for mongodb database
     # client = MongoClient('mongodb://zkj1234:zkj1234@192.168.1.113:27017/src_disease')
-    client = MongoClient('mongodb://kay123:kayzhao@192.168.1.110:27017/src_disease')
+    # client = MongoClient('mongodb://kay123:kayzhao@192.168.1.110:27017/src_disease')
+    src_client = MongoClient('mongodb://192.168.1.113:27017/src_disease')
     # client = MongoClient('mongodb://192.168.1.110:27017/biodis')
     # do_parser.parse(client.src_disease.do, False)
     # hpo_parser.parse(client.src_disease.hpo, False)
-    kegg_parser.parse(client.src_disease.kegg_new, True)
+    # kegg_parser.parse(client.src_disease.kegg_new, True)
     # efo_parser.parse(client.src_disease.efo, False)
     # omim_parser.parse(client.src_disease.omim, False)
-
+    nci_parser.parse(src_client.src_disease.nci, False)
     # disgenet_parser.parse(client.src_disease.disgenet, False)
     # mesh_parser.parse(client.src_disease.mesh, False)
     # pydb_parser.parse(client.src_disease.pydb, False)
